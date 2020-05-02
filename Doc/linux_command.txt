@@ -1,6 +1,6 @@
 
 #查看进程
-ps -eo pid,ppid,sid,tty,pgrp,comm,stat,cmd | grep -E 'bash|PID|nginx'
+ps -eo pid,ppid,sid,tty,pgrp,comm,stat,cmd | grep -E 'bash|PID|XiaoHG_SERVER'
 
 #跟踪进程信号
 strace -e trace=signal -p PID

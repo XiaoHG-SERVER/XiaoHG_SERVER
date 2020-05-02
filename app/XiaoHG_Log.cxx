@@ -9,9 +9,9 @@
 #include <time.h> 
 #include <fcntl.h> 
 #include <errno.h> 
-#include "ngx_c_conf.h"
-#include "ngx_macro.h"
-#include "ngx_global.h"
+#include "XiaoHG_c_conf.h"
+#include "XiaoHG_macro.h"
+#include "XiaoHG_global.h"
 
 /* level print */
 static u_char g_stErriLevels[][20]  = 
@@ -48,7 +48,7 @@ void SetLogLevel(int iErrorLevel)
  * test time: 2020.04.23 pass
  * function name: XiaoHG_Log
  * =================================================================*/
-//(such)2020/04/09 20:32:40 [alert] [pid: 30112] [errno: 98, Address already in use] [nginx]: ProcessGetStatus() pid = 30113 exited on signal 11!
+//(such)2020/04/09 20:32:40 [alert] [pid: 30112] [errno: 98, Address already in use] [XiaoHG]: ProcessGetStatus() pid = 30113 exited on signal 11!
 void XiaoHG_Log(int iLogType, int iLogLevel, int iErrCode, const char* pFmt, ...)
 {
 	char pLogStr[MAX_LOG_STRLEN] = { 0 };
@@ -97,7 +97,7 @@ void XiaoHG_Log(int iLogType, int iLogLevel, int iErrCode, const char* pFmt, ...
 	va_start(stArgs, pFmt);
 	/* Log to file */
 	/* int _vsnprintf(char* str, size_t size, const char* format, va_list ap); */
-	iLogStrLen = vsnprintf(pLogStr + iLogStrLen, NGX_MAX_ERROR_STR - iLogStrLen, pFmt, stArgs);
+	iLogStrLen = vsnprintf(pLogStr + iLogStrLen, XiaoHG_MAX_ERROR_STR - iLogStrLen, pFmt, stArgs);
 	va_end(stArgs);
     *(pLogStr + strlen(pLogStr)) = '\n';
 
