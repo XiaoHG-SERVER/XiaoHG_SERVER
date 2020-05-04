@@ -1,4 +1,9 @@
 ﻿
+/*
+ * Copyright (C/C++) XiaoHG
+ * Copyright (C/C++) XiaoHG_SERVER
+ */
+
 #ifndef __XiaoHG_GBLDEF_H__
 #define __XiaoHG_GBLDEF_H__
 

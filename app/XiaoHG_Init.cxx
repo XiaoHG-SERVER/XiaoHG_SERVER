@@ -1,5 +1,8 @@
 
-/* Init global values */
+/*
+ * Copyright (C/C++) XiaoHG
+ * Copyright (C/C++) XiaoHG_SERVER
+ */
 
 #include <stdlib.h>
 #include <string.h>

@@ -1,4 +1,9 @@
 ﻿
+/*
+ * Copyright (C/C++) XiaoHG
+ * Copyright (C/C++) XiaoHG_SERVER
+ */
+
 #include <stdarg.h>
 #include <unistd.h>
 #include "XiaoHG_Global.h"

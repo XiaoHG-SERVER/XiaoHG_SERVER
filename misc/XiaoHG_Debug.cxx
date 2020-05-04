@@ -1,4 +1,9 @@
 
+/*
+ * Copyright (C/C++) XiaoHG
+ * Copyright (C/C++) XiaoHG_SERVER
+ */
+
 #include "XiaoHG_C_Socket.h"
 #include "XiaoHG_Func.h"
 #include "XiaoHG_Macro.h"
