@@ -12,15 +12,17 @@
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
 #include <pthread.h>
-#include "XiaoHG_c_conf.h"
-#include "XiaoHG_macro.h"
-#include "XiaoHG_global.h"
-#include "XiaoHG_func.h"
-#include "XiaoHG_c_memory.h"
-#include "XiaoHG_c_crc32.h"
-#include "XiaoHG_c_slogic.h"  
-#include "XiaoHG_logiccomm.h"  
-#include "XiaoHG_c_lockmutex.h"  
+#include "XiaoHG_C_Conf.h"
+#include "XiaoHG_Macro.h"
+#include "XiaoHG_Global.h"
+#include "XiaoHG_Func.h"
+#include "XiaoHG_C_Memory.h"
+#include "XiaoHG_C_Crc32.h"
+#include "XiaoHG_C_SLogic.h"  
+#include "XiaoHG_LogicComm.h"  
+#include "XiaoHG_C_LockMutex.h"  
+
+#define __THIS_FILE__ "XiaoHG_C_SLogic.cxx"
 
 /* Logic handler process call back*/
 typedef bool (CLogicSocket::*LogicHandlerCallBack)(LPCONNECTION_T pConn, LPMSG_HEADER_T pMsgHeader, char *pPkgBody, unsigned short iBodyLength);
@@ -56,6 +58,9 @@ CLogicSocket::~CLogicSocket(){}
  * =================================================================*/
 int CLogicSocket::Initalize()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CLogicSocket::Initalize track");
+
     /* Call the parent class function of the same name */
     return CSocket::Initalize();
 }
@@ -72,6 +77,9 @@ int CLogicSocket::Initalize()
  * =================================================================*/
 void CLogicSocket::ThreadRecvMsgHandleProc(char *pMsgBuf)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CLogicSocket::ThreadRecvMsgHandleProc track");
+
     void *pPkgBody = NULL;  /* packet point */
     LPMSG_HEADER_T pMsgHeader = (LPMSG_HEADER_T)pMsgBuf;    /* massage header */
     LPCOMM_PKG_HEADER pPkgHeader = (LPCOMM_PKG_HEADER)(pMsgBuf + m_iLenMsgHeader);  /* packet header */
@@ -152,6 +160,9 @@ void CLogicSocket::ThreadRecvMsgHandleProc(char *pMsgBuf)
  * =================================================================*/
 void CLogicSocket::HeartBeatTimeOutCheckProc(LPMSG_HEADER_T pstMsgHeader, time_t CurrentTime)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CLogicSocket::HeartBeatTimeOutCheckProc track");
+
     CMemory *pMemory = CMemory::GetInstance();
     /* check the connect is OK */
     if(pstMsgHeader->uiCurrentSequence == pstMsgHeader->pConn->uiCurrentSequence)
@@ -164,7 +175,7 @@ void CLogicSocket::HeartBeatTimeOutCheckProc(LPMSG_HEADER_T pstMsgHeader, time_t
         if(m_iIsTimeOutKick == 1)
         {
             /* The need to kick out directly at the time */
-            CloseConnectionInRecy(pConn);
+            CloseConnectionToRecy(pConn);
         }
         /* The judgment criterion for timeout kicking is the interval of each check * 3. 
          * If no heartbeat packet is sent after this time, 
@@ -172,7 +183,7 @@ void CLogicSocket::HeartBeatTimeOutCheckProc(LPMSG_HEADER_T pstMsgHeader, time_t
         else if((CurrentTime - pConn->iLastHeartBeatTime) > (m_iWaitTime * 3 + 10))
         {
             XiaoHG_Log(LOG_FILE, LOG_LEVEL_NOTICE, 0, "Heart beat check time out kick socket: %d", pConn->iSockFd);
-            CloseConnectionInRecy(pConn);
+            CloseConnectionToRecy(pConn);
         }
         pMemory->FreeMemory(pstMsgHeader);
     }
@@ -187,6 +198,9 @@ void CLogicSocket::HeartBeatTimeOutCheckProc(LPMSG_HEADER_T pstMsgHeader, time_t
 /* 发送没有包体的数据包给客户端，心跳包 */
 void CLogicSocket::SendNoBodyPkgToClient(LPMSG_HEADER_T pMsgHeader,unsigned short iMsgCode)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CLogicSocket::SendNoBodyPkgToClient track");
+
     CMemory *pMemory = CMemory::GetInstance();
     char *pSendBuff = (char *)pMemory->AllocMemory(m_iLenMsgHeader + m_iLenPkgHeader,false);
 
@@ -215,6 +229,9 @@ void CLogicSocket::SendNoBodyPkgToClient(LPMSG_HEADER_T pMsgHeader,unsigned shor
  * =================================================================*/
 bool CLogicSocket::HandleRegister(LPCONNECTION_T pConn, LPMSG_HEADER_T pMsgHeader, char *pPkgBody, unsigned short iBodyLength)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CLogicSocket::HandleRegister track");
+
     /* Check packet is OK */
     if(pPkgBody == NULL || sizeof(REGISTER_T) != iBodyLength)
     {
@@ -268,7 +285,10 @@ bool CLogicSocket::HandleRegister(LPCONNECTION_T pConn, LPMSG_HEADER_T pMsgHeade
 }
 
 bool CLogicSocket::HandleLogIn(LPCONNECTION_T pConn,LPMSG_HEADER_T pMsgHeader,char *pPkgBody,unsigned short iBodyLength)
-{    
+{
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CLogicSocket::HandleLogIn track");
+
     if(pPkgBody == NULL || sizeof(LOGIN_T) != iBodyLength)
     {        
         return false;
@@ -305,6 +325,9 @@ bool CLogicSocket::HandleLogIn(LPCONNECTION_T pConn,LPMSG_HEADER_T pMsgHeader,ch
  * =================================================================*/
 bool CLogicSocket::HandleHeartbeat(LPCONNECTION_T pConn, LPMSG_HEADER_T pMsgHeader, char *pPkgBody, unsigned short iBodyLength)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CLogicSocket::HandleHeartbeat track");
+
     /* Heartbeat packet is not body */
     if(iBodyLength != 0)
     {

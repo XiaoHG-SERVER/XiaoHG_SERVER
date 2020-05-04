@@ -6,9 +6,11 @@
 #include <signal.h> 
 #include <errno.h> 
 #include <sys/wait.h> 
-#include "XiaoHG_global.h"
-#include "XiaoHG_macro.h"
-#include "XiaoHG_func.h" 
+#include "XiaoHG_Global.h"
+#include "XiaoHG_Macro.h"
+#include "XiaoHG_Func.h" 
+
+#define __THIS_FILE__ "XiaoHG_Signal.cxx"
 
 /* signals struct */
 typedef struct 
@@ -50,6 +52,9 @@ SIGNAL_T signals[] = {
  * =================================================================*/
 int InitSignals()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "InitSignals track");
+
     SIGNAL_T *pstSig = NULL;
     struct sigaction stSa;  /* sigaction：A system-defined structure related to signals */
     /* The number of the signal is not 0 */
@@ -96,6 +101,9 @@ int InitSignals()
  * =================================================================*/
 static void SignalHandler(int iSigNo, siginfo_t *pSigInfo, void *pContext)
 {    
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "SignalHandler track");
+
     SIGNAL_T *pstSig = NULL;
     /* find the register signal */
     for (pstSig = signals; pstSig->iSigNo != 0; pstSig++)     
@@ -172,6 +180,9 @@ static void SignalHandler(int iSigNo, siginfo_t *pSigInfo, void *pContext)
  * =================================================================*/
 static void ProcessGetStatus(void)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "ProcessGetStatus track");
+
     int iOne = 0;        /* only iOne time to signal handle */
     int iStatus = 0;
     pid_t pid = 0;

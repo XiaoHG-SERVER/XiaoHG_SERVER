@@ -3,9 +3,11 @@
 #include <stdlib.h>
 #include <unistd.h> 
 #include <string.h>
-#include "XiaoHG_global.h"
-#include "XiaoHG_func.h"
-#include "XiaoHG_macro.h"
+#include "XiaoHG_Global.h"
+#include "XiaoHG_Func.h"
+#include "XiaoHG_Macro.h"
+
+#define __THIS_FILE__ "XiaoHG_SetProcTitile.cxx"
 
 /* =================================================================
  * auth: XiaoHG
@@ -18,6 +20,9 @@
  * =================================================================*/
 void InitSetProcTitle()
 { 
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "InitSetProcTitle track");
+
     g_pEnvMem = new char[g_uiEnvNeedMem]; 
     memset(g_pEnvMem, 0, g_uiEnvNeedMem);
     char *ptmp = g_pEnvMem;
@@ -41,6 +46,9 @@ void InitSetProcTitle()
  * =================================================================*/
 int SetProcTitle(const char *pTitle)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "SetProcTitle track");
+
     size_t iTitleLen = strlen(pTitle);                       /* get pTitle length */
     size_t iTitolLen = g_uiArgvNeedMem + g_uiEnvNeedMem;    /* argv and environ memory */
  

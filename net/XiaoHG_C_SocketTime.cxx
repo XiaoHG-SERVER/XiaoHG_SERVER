@@ -11,13 +11,15 @@
 #include <errno.h> 
 #include <sys/ioctl.h>  
 #include <arpa/inet.h>
-#include "XiaoHG_c_conf.h"
-#include "XiaoHG_macro.h"
-#include "XiaoHG_global.h"
-#include "XiaoHG_func.h"
-#include "XiaoHG_c_socket.h"
-#include "XiaoHG_c_memory.h"
-#include "XiaoHG_c_lockmutex.h"
+#include "XiaoHG_C_Conf.h"
+#include "XiaoHG_Macro.h"
+#include "XiaoHG_Global.h"
+#include "XiaoHG_Func.h"
+#include "XiaoHG_C_Socket.h"
+#include "XiaoHG_C_Memory.h"
+#include "XiaoHG_C_LockMutex.h"
+
+#define __THIS_FILE__ "XiaoHG_C_SocketTime.cxx"
 
 /* =================================================================
  * auth: XiaoHG
@@ -32,6 +34,9 @@
  * =================================================================*/
 void CSocket::AddToTimerQueue(LPCONNECTION_T pConn)
 {
+	/* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::AddToTimerQueue track");
+
     CMemory *pMemory = CMemory::GetInstance();
     time_t CurrTime = time(NULL);		/* Get Current time */
     CurrTime += m_iWaitTime;			/* 20s after */
@@ -56,6 +61,9 @@ void CSocket::AddToTimerQueue(LPCONNECTION_T pConn)
  * =================================================================*/
 time_t CSocket::GetTimerQueueEarliestTime()
 {
+	/* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::GetTimerQueueEarliestTime track");
+
     std::multimap<time_t, LPMSG_HEADER_T>::iterator pos;
 	pos = m_TimerQueueMultiMap.begin();		
 	return pos->first;
@@ -73,6 +81,9 @@ time_t CSocket::GetTimerQueueEarliestTime()
  * =================================================================*/
 LPMSG_HEADER_T CSocket::RemoveTimerQueueFirstTime()
 {
+	/* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::RemoveTimerQueueFirstTime track");
+
 	LPMSG_HEADER_T pMsgHeader = NULL;
 	std::multimap<time_t, LPMSG_HEADER_T>::iterator pos;
 	
@@ -101,7 +112,10 @@ LPMSG_HEADER_T CSocket::RemoveTimerQueueFirstTime()
  * parameter:
  * =================================================================*/
 LPMSG_HEADER_T CSocket::GetOverTimeTimer(time_t CurrentTime)
-{	
+{
+	/* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::GetOverTimeTimer track");
+
 	CMemory *pMemory = CMemory::GetInstance();
 	LPMSG_HEADER_T pOverTimeMsg = NULL;
 
@@ -151,6 +165,9 @@ LPMSG_HEADER_T CSocket::GetOverTimeTimer(time_t CurrentTime)
  * =================================================================*/
 void CSocket::DeleteFromTimerQueue(LPCONNECTION_T pConn)
 {
+	/* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::DeleteFromTimerQueue track");
+
 	CMemory *pMemory = CMemory::GetInstance();
     CLock lock(&m_TimeQueueMutex);
 	std::multimap<time_t, LPMSG_HEADER_T>::iterator pos;
@@ -186,6 +203,9 @@ lblMTQM:
  * =================================================================*/
 void CSocket::ClearAllFromTimerQueue()
 {
+	/* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::ClearAllFromTimerQueue track");
+
 	CMemory *pMemory = CMemory::GetInstance();	
 	std::multimap<time_t, LPMSG_HEADER_T>::iterator pos = m_TimerQueueMultiMap.begin();
 	std::multimap<time_t, LPMSG_HEADER_T>::iterator posEnd = m_TimerQueueMultiMap.end();
@@ -210,6 +230,9 @@ void CSocket::ClearAllFromTimerQueue()
  * =================================================================*/
 void* CSocket::HeartBeatMonitorThread(void* pThreadData)
 {
+	/* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::HeartBeatMonitorThread track");
+
 	time_t CurrentTime = 0;
     ThreadItem *pThread = static_cast<ThreadItem*>(pThreadData);
     CSocket *pSocketObj = pThread->_pThis;
@@ -266,6 +289,9 @@ void* CSocket::HeartBeatMonitorThread(void* pThreadData)
  * =================================================================*/
 void CSocket::HeartBeatTimeOutCheckProc(LPMSG_HEADER_T pstMsgHeader, time_t CurrentTime)
 {
+	/* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::HeartBeatTimeOutCheckProc track");
+
 	CMemory *pMemory = CMemory::GetInstance();
 	pMemory->FreeMemory(pstMsgHeader);
 }

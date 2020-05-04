@@ -10,7 +10,7 @@
 #include <semaphore.h>
 #include <atomic>
 #include <map>
-#include "XiaoHG_comm.h"
+#include "XiaoHG_Comm.h"
 
 /* Connection queue completed */
 #define XiaoHG_LISTEN_BACKLOG 	511
@@ -134,7 +134,7 @@ public:/* Epoll */
 	
 public:/* Recycle connection */
 	/* When actively closing a connection, do some aftercare function */
-	void CloseConnectionInRecy(LPCONNECTION_T pConn);
+	void CloseConnectionToRecy(LPCONNECTION_T pConn);
 
 public:
 	/* Throw the data into the queue to be sent */	
@@ -154,7 +154,7 @@ private:
 
 	/* Obtaining peer information */
 	/* According to the information given in parameter 1, get the address port string and return the length of this string */
-	size_t ConnectInfo(struct sockaddr *pstSockAddr, int iPort, u_char *pText, size_t uiLen);  	
+	size_t ConnectionInfo(struct sockaddr *pstSockAddr, int iPort, u_char *pText, size_t uiLen);  	
 
 	/* Connection */
 	void InitConnectionPool();							/* Connect init */
@@ -175,18 +175,18 @@ private:
 	bool TestFlood(LPCONNECTION_T pConn);	
 	
 	/* Thread */
-	static void* ServerSendQueueThread(void *threadData);				/* A thread dedicated to sending data */
+	static void* SendMsgQueueThread(void *threadData);				/* A thread dedicated to sending data */
 	static void* ServerRecyConnectionThread(void *threadData);			/* Specially used to recycle connected threads */
 	/* Time queue monitoring thread, processing threads kicked by users who do not send heartbeat packets when they expire */
 	static void* HeartBeatMonitorThread(void *threadData);		
 	
 private:/* Recycle */
-	void CloseListeningSockets();						/* Close Listening socket */
+	void CloseListeningSocket();						/* Close Listening socket */
 	void CloseConnectionImmediately(LPCONNECTION_T pConn);			/* General connection close function, resources are released with this function */
 	void ClearMsgSendQueue();							/* Processing the send message queue */
 
-	void PutRecyConnectQueue(LPCONNECTION_T pConn);		/* Put the connection to be recycled into the delayed recycling queue */
-	void ClearConnection();								/* Recycle connection pool */
+	void PutConnectToRecyQueue(LPCONNECTION_T pConn);		/* Put the connection to be recycled into the delayed recycling queue */
+	void ClearConnections();								/* Recycle connection pool */
 	void FreeConnection(LPCONNECTION_T pConn);			/* Return the connection represented by the parameter pConn to the connection pool */
 
 	void DeleteFromTimerQueue(LPCONNECTION_T pConn);	/* Delete the specified user tcp connection from the Timer table */

@@ -12,7 +12,7 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h> //ioctl
 #include <arpa/inet.h>
-#include "XiaoHG_c_crc32.h"
+#include "XiaoHG_C_Crc32.h"
 #include "test_common.h"
 #include "test_global.h"
 #include "test_include.h"

@@ -17,7 +17,7 @@ public:/* Thread pool creation, business processing, business triggering */
     int Create(int iThreadNum); /* Create all threads in this thread pool */
     /* After receiving a complete message, enter the message queue and trigger the thread in the thread pool to process the message */
     void PutMsgRecvQueueAndSignal(char *pMsgBuff);      
-    void Call();    /* Here comes the task, transfer the threads in a thread pool to work */
+    void CallRecvMsgHandleThread();    /* Here comes the task, transfer the threads in a thread pool to work */
 
 public:/* Reserved for measurement */
     /* Get the size of the received message queue */

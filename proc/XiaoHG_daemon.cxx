@@ -7,9 +7,11 @@
 #include <errno.h> 
 #include <sys/stat.h>
 #include <fcntl.h>
-#include "XiaoHG_func.h"
-#include "XiaoHG_macro.h"
-#include "XiaoHG_c_conf.h"
+#include "XiaoHG_Func.h"
+#include "XiaoHG_Macro.h"
+#include "XiaoHG_C_Conf.h"
+
+#define __THIS_FILE__ "XiaoHG_Deamon.cxx"
 
 /* =================================================================
  * auth: XiaoHG
@@ -20,6 +22,9 @@
  * =================================================================*/
 int DaemonInit()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "DaemonInit track");
+
     switch (fork())
     {
     case -1:/* fork failed */

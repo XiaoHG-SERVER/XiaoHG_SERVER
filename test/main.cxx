@@ -5,13 +5,12 @@
 #include<unistd.h>
 #include <sys/socket.h>
 #include <unistd.h>  //usleep
-
 #include "test_global.h"
 #include "test_include.h"
 
 int main(int argc, char *const *argv)
 {
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 1; i++)
 	{
 		fork();
 	}
@@ -40,7 +39,6 @@ int main(int argc, char *const *argv)
 		}
 	}
 
-	printf("[%s: %d]测试程序退出，延迟10s回收socketId...\n", __FILE__, __LINE__);
 	close(iSocketFd);
 	return 0;
 }

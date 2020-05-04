@@ -11,13 +11,15 @@
 #include <errno.h> 
 #include <sys/ioctl.h> 
 #include <arpa/inet.h>
-#include "XiaoHG_c_conf.h"
-#include "XiaoHG_macro.h"
-#include "XiaoHG_global.h"
-#include "XiaoHG_func.h"
-#include "XiaoHG_c_socket.h"
-#include "XiaoHG_c_memory.h"
-#include "XiaoHG_c_lockmutex.h"
+#include "XiaoHG_C_Conf.h"
+#include "XiaoHG_Macro.h"
+#include "XiaoHG_Global.h"
+#include "XiaoHG_Func.h"
+#include "XiaoHG_C_Socket.h"
+#include "XiaoHG_C_Memory.h"
+#include "XiaoHG_C_LockMutex.h"
+
+#define __THIS_FILE__ "XiaoHG_C_Socket.cxx"
 
 CSocket::CSocket()
 {
@@ -47,6 +49,9 @@ CSocket::CSocket()
  * =================================================================*/
 int CSocket::Initalize()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::Initalize track");
+
     LoadConfig(); /* load config */
     /* open the listen iPort */
     return OpenListeningSockets();
@@ -62,6 +67,9 @@ int CSocket::Initalize()
  * =================================================================*/
 int CSocket::InitializeSubProc()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::InitializeSubProc track");
+
     /* Message queue mutex initialization */
     if(pthread_mutex_init(&m_SendMessageQueueMutex, NULL) != 0)
     {
@@ -101,7 +109,7 @@ int CSocket::InitializeSubProc()
     /* send msg thread */
     ThreadItem *pSendQueueThreadItem = new ThreadItem(this);  
     m_ThreadPoolVector.push_back(pSendQueueThreadItem);
-    if(pthread_create(&pSendQueueThreadItem->_Handle, NULL, ServerSendQueueThread, pSendQueueThreadItem) != 0)
+    if(pthread_create(&pSendQueueThreadItem->_Handle, NULL, SendMsgQueueThread, pSendQueueThreadItem) != 0)
     {
         XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "pthread_create(ServerSendQueueThread) failed");
         return XiaoHG_ERROR;
@@ -154,6 +162,9 @@ CSocket::~CSocket()
  * =================================================================*/
 void CSocket::ShutdownSubProc()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::ShutdownSubProc track");
+
     /* make ServerSendQueueThread go on */
     if(sem_post(&m_SemEventSendQueue)==-1)  
     {
@@ -177,7 +188,7 @@ void CSocket::ShutdownSubProc()
 
     /* free */
     ClearMsgSendQueue();
-    ClearConnection();
+    ClearConnections();
     ClearAllFromTimerQueue();
     
     /* destory */
@@ -198,6 +209,9 @@ void CSocket::ShutdownSubProc()
  * =================================================================*/
 void CSocket::ClearMsgSendQueue()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::ClearMsgSendQueue track");
+
 	char *pMemPoint = NULL;
 	CMemory *pMemory = CMemory::GetInstance();
 	while(!m_MsgSendQueue.empty())
@@ -218,6 +232,12 @@ void CSocket::ClearMsgSendQueue()
  * =================================================================*/
 void CSocket::LoadConfig()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::LoadConfig track");
+
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::LoadConfig() track");
+
     CConfig *pConfig = CConfig::GetInstance();
 
     /* The largest item connected of epoll*/
@@ -263,6 +283,9 @@ void CSocket::LoadConfig()
  * =================================================================*/
 int CSocket::OpenListeningSockets()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::OpenListeningSockets track");
+
     int iPort = 0;
     int iSockFd = 0;
     char strListeningPortInfo[100] = { 0 };
@@ -343,6 +366,9 @@ int CSocket::OpenListeningSockets()
  * =================================================================*/
 int CSocket::SetNonBlocking(int iSockFd) 
 {    
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::SetNonBlocking track");
+
     int nb = 1; /* 0：clean, 1：set */
     if(ioctl(iSockFd, FIONBIO, &nb) == -1) 
     {
@@ -362,6 +388,9 @@ int CSocket::SetNonBlocking(int iSockFd)
  * =================================================================*/
 void CSocket::SendMsg(char *pSendBuff) 
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::SendMsg track");
+
     CMemory *pMemory = CMemory::GetInstance();
     /* m_SendMessageQueueMutex lock */
     CLock lock(&m_SendMessageQueueMutex);
@@ -387,7 +416,7 @@ void CSocket::SendMsg(char *pSendBuff)
         XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "Found that a user %d has a large backlog of packets to be sent", pConn->iSockFd); 
         ++m_iDiscardSendPkgCount;
         pMemory->FreeMemory(pSendBuff);
-        CloseConnectionInRecy(pConn);
+        CloseConnectionToRecy(pConn);
 		return;
     }
 
@@ -412,8 +441,11 @@ void CSocket::SendMsg(char *pSendBuff)
  * discription: When actively closing a pConnection, do some aftercare function
  * parameter:
  * =================================================================*/
-void CSocket::CloseConnectionInRecy(LPCONNECTION_T pConn)
+void CSocket::CloseConnectionToRecy(LPCONNECTION_T pConn)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::CloseConnectionToRecy track");
+
     if(m_IsHBTimeOutCheckEnable == 1)
     {
         /* clrean up the connect if in the time list */
@@ -433,7 +465,7 @@ void CSocket::CloseConnectionInRecy(LPCONNECTION_T pConn)
     }
     /* Add the pConnection to the delayed recycling 
      * queue and let the delayed recycling mechanism manage */
-    PutRecyConnectQueue(pConn);
+    PutConnectToRecyQueue(pConn);
     return;
 }
 
@@ -447,6 +479,9 @@ void CSocket::CloseConnectionInRecy(LPCONNECTION_T pConn)
  * =================================================================*/
 bool CSocket::TestFlood(LPCONNECTION_T pConn)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::TestFlood track");
+
     struct timeval sCurrTime;   /* Current time structure */
 	uint64_t iCurrTime;         /* Current time (ms) */
     /* Get current time */
@@ -486,6 +521,9 @@ bool CSocket::TestFlood(LPCONNECTION_T pConn)
  * =================================================================*/
 int CSocket::EpollInit()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::EpollInit track");
+
     m_EpollHandle = epoll_create(m_EpollCreateConnectCount);
     if (m_EpollHandle == -1) 
     {
@@ -543,6 +581,9 @@ int CSocket::EpollInit()
  * =================================================================*/
 int CSocket::EpollRegisterEvent(int iSockFd, uint32_t uiEventType, uint32_t uiFlag, int iAction, LPCONNECTION_T pConn)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::EpollRegisterEvent track");
+
     struct epoll_event ev;    
     memset(&ev, 0, sizeof(ev));
     /* add node */
@@ -609,7 +650,10 @@ int CSocket::EpollRegisterEvent(int iSockFd, uint32_t uiEventType, uint32_t uiFl
  * parameter:
  * =================================================================*/
 int CSocket::EpolWaitlProcessEvents(int iTimer) 
-{   
+{
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::EpolWaitlProcessEvents track");
+
     /* Wait for the event, the event will return to m_Events, at most return EPOLL_MAX_EVENTS iEpollEvents [because I only provide these memories], 
      * if the interval between two calls to epoll_wait () is relatively long, it may accumulate Events, 
      * so calling epoll_wait may fetch multiple iEpollEvents, blocking iTimer for such a long time unless: 
@@ -713,8 +757,11 @@ int CSocket::EpolWaitlProcessEvents(int iTimer)
  * discription: send message.
  * parameter:
  * =================================================================*/
-void* CSocket::ServerSendQueueThread(void *pThreadData)
+void* CSocket::SendMsgQueueThread(void *pThreadData)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::SendMsgQueueThread track");
+
     ssize_t uiSendLen = 0;                  /* Record the size of the data that has been sent */
     char *pMsgBuff = NULL;                  /* point send message */
     LPMSG_HEADER_T pMsgHeader = NULL;
@@ -920,54 +967,20 @@ void* CSocket::ServerSendQueueThread(void *pThreadData)
  * auth: XiaoHG
  * date: 2020.04.23
  * test time: 2020.04.23
- * function name: CloseListeningSockets
+ * function name: CloseListeningSocket
  * discription: clean listening socket
  * parameter:
  * =================================================================*/
-void CSocket::CloseListeningSockets()
+void CSocket::CloseListeningSocket()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::CloseListeningSocket track");
+
     /* all listening sockets */
     for(int i = 0; i < m_ListenPortCount; i++) 
     {  
         close(m_ListenSocketList[i]->iSockFd);
         XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, 0, "close %d iPort", m_ListenSocketList[i]->iPort);
     }/* end for(int i = 0; i < m_ListenPortCount; i++) */
-    return;
-}
-
-/* =================================================================
- * auth: XiaoHG
- * date: 2020.04.23
- * test time: 2020.04.23
- * function name: PrintTDInfo
- * discription: print TD msg (dbg msg)
- * parameter:
- * =================================================================*/
-void CSocket::PrintTDInfo()
-{
-    time_t CurrTime = time(NULL);
-    /* 10s iTimer */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, 0, "CurrTime - m_LastPrintTime = %d, CurrTime = %d, m_LastPrintTime = %d",CurrTime - m_LastPrintTime, CurrTime, m_LastPrintTime);
-    if((CurrTime - m_LastPrintTime) > 10)
-    {
-        /* recv list */
-        int tmprmqc = g_ThreadPool.getRecvMsgQueueCount(); 
-        //m_LastPrintTime = CurrTime;
-        int tmpoLUC = m_OnLineUserCount;    /* Atomic transfer, print atomic type error directly */
-        int tmpsmqc = m_iSendMsgQueueCount; /* Atomic transfer, print atomic type error directly */
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, 0, "------------------------------------begin--------------------------------------");
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, 0, "Current Online/Total(%d/%d)", tmpoLUC, m_EpollCreateConnectCount);
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, 0, "Connection free conn/Total/Release connection(%d/%d/%d)", 
-                                                m_FreeConnectionList.size(), m_ConnectionList.size(), m_RecyConnectionList.size());   
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, 0, "Time queue size(%d)", m_TimerQueueMultiMap.size());     
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, 0, "Current receive queue size/send queue size(%d/%d)，Drop packets: %d",
-                                                tmprmqc, tmpsmqc, m_iDiscardSendPkgCount);  
-        if( tmprmqc > 100000)
-        {
-            /* The receiving queue is too large, report it, this should be alert, consider speed limit and other means */
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, 0, "The number of receive queues is too large(%d)，Need more！！！！！！", tmprmqc);  
-        }
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, 0, "------------------------------------end--------------------------------------");
-    }
     return;
 }

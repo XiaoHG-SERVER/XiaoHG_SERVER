@@ -11,13 +11,15 @@
 #include <errno.h> 
 #include <sys/ioctl.h> 
 #include <arpa/inet.h>
-#include "XiaoHG_c_conf.h"
-#include "XiaoHG_macro.h"
-#include "XiaoHG_global.h"
-#include "XiaoHG_func.h"
-#include "XiaoHG_c_socket.h"
-#include "XiaoHG_c_memory.h"
-#include "XiaoHG_c_lockmutex.h"
+#include "XiaoHG_C_Conf.h"
+#include "XiaoHG_Macro.h"
+#include "XiaoHG_Global.h"
+#include "XiaoHG_Func.h"
+#include "XiaoHG_C_Socket.h"
+#include "XiaoHG_C_Memory.h"
+#include "XiaoHG_C_LockMutex.h"
+
+#define __THIS_FILE__ "XiaoHG_C_SocketConn.cxx"
 
 connection_s::connection_s()
 {		
@@ -39,6 +41,9 @@ connection_s::~connection_s()
  * =================================================================*/
 void connection_s::GetOneToUse()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "connection_s::GetOneToUse track");
+
     ++uiCurrentSequence;                        /* The serial number is increased by 1 during initialization */
     iSockFd = -1;                             /* in the beging = -1 */
     iRecvCurrentStatus = PKG_HD_INIT;           /* The packet receiving state is in the initial state, ready to receive the data packet header [state machine] */
@@ -64,6 +69,9 @@ void connection_s::GetOneToUse()
  * =================================================================*/
 void connection_s::PutOneToFree()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "connection_s::PutOneToFree track");
+
     ++uiCurrentSequence;    /* Increase the serial number by 1 */
     /* free memory */
     /* pRecvMsgMemPointer munber for free */
@@ -91,6 +99,9 @@ void connection_s::PutOneToFree()
  * =================================================================*/
 void CSocket::InitConnectionPool()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::InitConnectionPool track");
+
     LPCONNECTION_T pConn = NULL;
     CMemory *pMemory = CMemory::GetInstance();   
     /* Create */
@@ -121,6 +132,9 @@ void CSocket::InitConnectionPool()
  * =================================================================*/
 LPCONNECTION_T CSocket::GetConnection(int iSockFd)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::GetConnection track");
+
     /* lock the pConnection list */
     CLock lock(&m_ConnectionMutex);
     /* have free pConnection or not*/
@@ -156,6 +170,9 @@ LPCONNECTION_T CSocket::GetConnection(int iSockFd)
  * =================================================================*/
 void CSocket::FreeConnection(LPCONNECTION_T pConn) 
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::FreeConnection track");
+
     /* lock free pConnection list */
     CLock lock(&m_ConnectionMutex);
     /* free pConnection */
@@ -170,7 +187,7 @@ void CSocket::FreeConnection(LPCONNECTION_T pConn)
  * auth: XiaoHG
  * date: 2020.04.23
  * test time: 2020.04.23
- * function name: EpollEventAcceptHandler
+ * function name: PutConnectToRecyQueue
  * discription: Put the pConnection to be recycled into a queue,    
  *              and a subsequent special thread will handle the 
  *              recovery of the pConnection in this queue. Some 
@@ -181,8 +198,11 @@ void CSocket::FreeConnection(LPCONNECTION_T pConn)
  *              a queue first.
  * parameter:
  * =================================================================*/
-void CSocket::PutRecyConnectQueue(LPCONNECTION_T pConn)
+void CSocket::PutConnectToRecyQueue(LPCONNECTION_T pConn)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::PutConnectToRecyQueue track");
+
     bool bIsFind = false;
     std::list<LPCONNECTION_T>::iterator pos;
     /* lock recy connect queue */
@@ -219,6 +239,9 @@ void CSocket::PutRecyConnectQueue(LPCONNECTION_T pConn)
  * =================================================================*/
 void* CSocket::ServerRecyConnectionThread(void* pThreadData)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::ServerRecyConnectionThread track");
+
     time_t CurrentTime = 0;
     LPCONNECTION_T pConn = NULL;
     std::list<LPCONNECTION_T>::iterator pos;
@@ -329,6 +352,9 @@ lblRRTD:
  * =================================================================*/
 void CSocket::CloseConnectionImmediately(LPCONNECTION_T pConn)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::CloseConnectionImmediately track");
+
     FreeConnection(pConn); 
     if(pConn->iSockFd != -1)
     {
@@ -346,8 +372,11 @@ void CSocket::CloseConnectionImmediately(LPCONNECTION_T pConn)
  * discription: clear pConnection list 
  * parameter:
  * =================================================================*/
-void CSocket::ClearConnection()
+void CSocket::ClearConnections()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::ClearConnections track");
+    
     LPCONNECTION_T pConn = NULL;
 	CMemory *pMemory = CMemory::GetInstance();
 	while(!m_ConnectionList.empty())

@@ -6,9 +6,11 @@
 #include <signal.h>
 #include <errno.h>
 #include <unistd.h>
-#include "XiaoHG_func.h"
-#include "XiaoHG_macro.h"
-#include "XiaoHG_c_conf.h"
+#include "XiaoHG_Func.h"
+#include "XiaoHG_Macro.h"
+#include "XiaoHG_C_Conf.h"
+
+#define __THIS_FILE__ "XiaoHG_ProcessCycle.cxx"
 
 #define MAX_PROCESS_TITILE_LEN  1000
 #define WORKER_PROCESS_TITLE    "XiaoHG_SERVER worker process"
@@ -28,6 +30,9 @@ static void WorkerProcessInit(int iWorkProcNo);
  * =================================================================*/
 void MasterProcessCycle()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "MasterProcessCycle track");
+
     sigset_t stSet;        /* signal stSet */
     sigemptyset(&stSet);   /* clrean signals */
 
@@ -93,6 +98,9 @@ void MasterProcessCycle()
  * =================================================================*/
 static void StartWorkerProcesses(int iWorkProcessCount)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "StartWorkerProcesses track");
+
     /* master进程在走这个循环，来创建若干个子进程 */
     for(int i = 0; i < iWorkProcessCount; i++)
     {
@@ -111,6 +119,9 @@ static void StartWorkerProcesses(int iWorkProcessCount)
  * =================================================================*/
 static int SpawnProcess(int iWorkProcNo)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "SpawnProcess track");
+
     pid_t pid = fork();
     /* 0: Child process, or: parent process*/
     switch (pid)
@@ -142,6 +153,9 @@ static int SpawnProcess(int iWorkProcNo)
  * =================================================================*/
 static void WorkerProcessCycle(int iWorkProcNo) 
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "WorkerProcessCycle track");
+
     /* stSet process id, this is worker process id = WORKER_PROCESS */
     g_iProcessID = WORKER_PROCESS;
     /* stSet worker process name */
@@ -172,6 +186,9 @@ static void WorkerProcessCycle(int iWorkProcNo)
  * =================================================================*/
 static void WorkerProcessInit(int iWorkProcNo)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "WorkerProcessInit track");
+
     sigset_t stSet; 
     sigemptyset(&stSet);  /* clear signals */
     /* Inherited signals, recv all signals */

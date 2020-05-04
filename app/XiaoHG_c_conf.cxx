@@ -1,14 +1,13 @@
 ﻿
-/* 和处理系统配置文件相关的放这里 */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
+#include "XiaoHG_Func.h"
+#include "XiaoHG_C_Conf.h" 
+#include "XiaoHG_Macro.h"
 
-#include "XiaoHG_func.h"
-#include "XiaoHG_c_conf.h" 
-#include "XiaoHG_macro.h"
+#define __THIS_FILE__ "XiaoHG_C_Conf.cxx"
 
 CConfig *CConfig::m_Instance = NULL;
 CConfig::CConfig(){}
@@ -30,8 +29,11 @@ CConfig::~CConfig()
  * function name: Load
  * discription: load log file.
  * =================================================================*/
-int CConfig::Load(const char *pConfName) 
+int CConfig::Load(const char *pConfName)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CConfig::Load track");
+    
     /* max item 500b */
     char LineBuf[501] = { 0 };
     FILE *fp = fopen(pConfName, "r");
@@ -100,8 +102,11 @@ int CConfig::Load(const char *pConfName)
  * function name: GetString
  * discription: get config from item name
  * =================================================================*/
-const char *CConfig::GetString(const char *p_itemname)
+const char* CConfig::GetString(const char *p_itemname)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CConfig::GetString track");
+
 	std::vector<LPCONF_ITEM>::iterator pos;	
 	for(pos = m_ConfigItemList.begin(); pos != m_ConfigItemList.end(); ++pos)
 	{	
@@ -121,6 +126,9 @@ const char *CConfig::GetString(const char *p_itemname)
  * =================================================================*/
 int CConfig::GetIntDefault(const char *p_itemname, const int def)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CConfig::GetIntDefault track");
+
 	std::vector<LPCONF_ITEM>::iterator pos;	
 	for(pos = m_ConfigItemList.begin(); pos != m_ConfigItemList.end(); ++pos)
 	{	

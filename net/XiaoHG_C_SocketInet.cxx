@@ -11,11 +11,13 @@
 #include <errno.h> 
 #include <sys/ioctl.h> 
 #include <arpa/inet.h>
-#include "XiaoHG_c_conf.h"
-#include "XiaoHG_macro.h"
-#include "XiaoHG_global.h"
-#include "XiaoHG_func.h"
-#include "XiaoHG_c_socket.h"
+#include "XiaoHG_C_Conf.h"
+#include "XiaoHG_Macro.h"
+#include "XiaoHG_Global.h"
+#include "XiaoHG_Func.h"
+#include "XiaoHG_C_Socket.h"
+
+#define __THIS_FILE__ "XiaoHG_C_SocketInet.cxx"
 
 /* =================================================================
  * auth: XiaoHG
@@ -27,15 +29,18 @@
  *              get the address port string and return the length of this string].
  * parameter:
  * =================================================================*/
-size_t CSocket::ConnectInfo(struct sockaddr *sa, int iPort, u_char *text, size_t len)
+size_t CSocket::ConnectionInfo(struct sockaddr *pSockAddr, int iPort, u_char *pText, size_t uiLen)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::ConnectionInfo track");
+
     u_char *p = NULL;
     struct sockaddr_in *sin = NULL;
 
-    switch (sa->sa_family)
+    switch (pSockAddr->sa_family)
     {
     case AF_INET:
-        sin = (struct sockaddr_in *) sa;
+        sin = (struct sockaddr_in *) pSockAddr;
         p = (u_char *) &sin->sin_addr;
         if(iPort)  /* Port information is also combined into a string */
         {
@@ -46,7 +51,7 @@ size_t CSocket::ConnectInfo(struct sockaddr *sa, int iPort, u_char *text, size_t
         {
             XiaoHG_Log(LOG_FILE, LOG_LEVEL_INFO, 0, "%ud.%ud.%ud.%ud", p[0], p[1], p[2], p[3]);  
         }
-        return (p - text);
+        return (p - pText);
         break;
     default:
         return 0;

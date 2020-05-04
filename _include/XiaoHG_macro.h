@@ -2,6 +2,9 @@
 #ifndef __XiaoHG_MACRO_H__
 #define __XiaoHG_MACRO_H__
 
+#define __AUTHER__  "XiaoHG"
+#define __XiaoHG_VERSION__ "V1.1.1.20200503"
+
 #define XiaoHG_SUCCESS 0
 #define XiaoHG_ERROR   -1
 
@@ -21,7 +24,8 @@
 #define LOG_LEVEL_WARN        5    /* Warning [warn]: belongs to the common level */
 #define LOG_LEVEL_NOTICE      6    /* Note [notice] */
 #define LOG_LEVEL_INFO        7    /* Information [info] */
-#define LOG_LEVEL_DEBUG       8    /* Debug [debug]: the lowest level */
+#define LOG_LEVEL_DEBUG       8    /* Debug [debug] */
+#define LOG_LEVEL_TRACK       9    /* Track [track]: function track */
 
 /* Define the default log storage path and file name */
 #define DEFAULT_LOG_PATH  "logs/XiaoHG_error.log"

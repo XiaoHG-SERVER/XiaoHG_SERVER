@@ -3,7 +3,9 @@
 #define __XiaoHG_CONF_H__
 
 #include <vector>
-#include "XiaoHG_global.h"
+#include "XiaoHG_Global.h"
+#include "XiaoHG_Macro.h"
+#include "XiaoHG_Func.h"
 
 class CConfig
 {
@@ -16,8 +18,11 @@ private:
 	static CConfig *m_Instance;
 
 public:	
-	static CConfig* GetInstance() 
-	{	
+	static CConfig* GetInstance()
+	{
+		/* function track */
+    	XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "GetInstance(CConfig) track");
+
 		if(m_Instance == NULL)
 		{
 			/* lock */

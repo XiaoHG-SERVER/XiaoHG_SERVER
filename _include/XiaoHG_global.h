@@ -3,8 +3,8 @@
 #define __XiaoHG_GBLDEF_H__
 
 #include <signal.h> 
-#include "XiaoHG_c_slogic.h"
-#include "XiaoHG_c_threadpool.h"
+#include "XiaoHG_C_SLogic.h"
+#include "XiaoHG_C_ThreadPool.h"
 
 /* Read config file, name length, content length*/
 #define CONF_ITEMNAME_LEN 50

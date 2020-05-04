@@ -3,7 +3,7 @@
 #define __XiaoHG_C_SLOGIC_H__
 
 #include <sys/socket.h>
-#include "XiaoHG_c_socket.h"
+#include "XiaoHG_C_Socket.h"
 
 /* Subclasses that handle logic and 
  * communication inherit from the parent class CScoekt */

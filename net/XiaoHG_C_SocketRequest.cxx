@@ -12,13 +12,15 @@
 #include <sys/ioctl.h> 
 #include <arpa/inet.h>
 #include <pthread.h> 
-#include "XiaoHG_c_conf.h"
-#include "XiaoHG_macro.h"
-#include "XiaoHG_global.h"
-#include "XiaoHG_func.h"
-#include "XiaoHG_c_socket.h"
-#include "XiaoHG_c_memory.h"
-#include "XiaoHG_c_lockmutex.h"
+#include "XiaoHG_C_Conf.h"
+#include "XiaoHG_Macro.h"
+#include "XiaoHG_Global.h"
+#include "XiaoHG_Func.h"
+#include "XiaoHG_C_Socket.h"
+#include "XiaoHG_C_Memory.h"
+#include "XiaoHG_C_LockMutex.h"
+
+#define __THIS_FILE__ "XiaoHG_C_SocketRequest.cxx"
 
 /* =================================================================
  * auth: XiaoHG
@@ -31,7 +33,10 @@
  * parameter:
  * =================================================================*/
 void CSocket::EpollEventReadRequestHandler(LPCONNECTION_T pConn)
-{  
+{
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::EpollEventReadRequestHandler track");
+
     /* Flood flags */
     bool bIsFlood = false;
     /* Receive the package, pay attention to the second and third parameters we use, 
@@ -125,7 +130,7 @@ void CSocket::EpollEventReadRequestHandler(LPCONNECTION_T pConn)
     {
         /* is flood, disconnection */
         XiaoHG_Log(LOG_ALL, LOG_LEVEL_NOTICE, 0, "check out socket: %d is flood attack, disconnection", pConn->iSockFd);
-        CloseConnectionInRecy(pConn);
+        CloseConnectionToRecy(pConn);
     }
     return;
 }
@@ -140,13 +145,16 @@ void CSocket::EpollEventReadRequestHandler(LPCONNECTION_T pConn)
  * =================================================================*/
 ssize_t CSocket::RecvProc(LPCONNECTION_T pConn, char *pSendBuff, ssize_t uiBuffLen)   
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::RecvProc track");
+
     ssize_t n = recv(pConn->iSockFd, pSendBuff, uiBuffLen, 0);      
     if(n == 0)
     {
         /* The client closes [should be completed 4 waved normally], 
          * directly recycle the pConnection, close the socket and add 
          * the pConnection to the delayed recycle queue */
-        CloseConnectionInRecy(pConn);
+        CloseConnectionToRecy(pConn);
         return XiaoHG_ERROR;
     }
 
@@ -197,7 +205,7 @@ ssize_t CSocket::RecvProc(LPCONNECTION_T pConn, char *pSendBuff, ssize_t uiBuffL
         }
 
         /* Close the socket directly, release the connection in the connection pool */
-        CloseConnectionInRecy(pConn);
+        CloseConnectionToRecy(pConn);
         return XiaoHG_ERROR;
     }
     return n;
@@ -212,7 +220,10 @@ ssize_t CSocket::RecvProc(LPCONNECTION_T pConn, char *pSendBuff, ssize_t uiBuffL
  * parameter:
  * =================================================================*/
 void CSocket::RecvMsgHeaderParseProc(LPCONNECTION_T pConn, bool &bIsFlood)
-{		
+{
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::RecvMsgHeaderParseProc track");
+
     LPCOMM_PKG_HEADER pPkgHeader = NULL;
     /* packet head in dataHaeadInfo munber */
     pPkgHeader = (LPCOMM_PKG_HEADER)pConn->dataHeadInfo;
@@ -275,6 +286,9 @@ void CSocket::RecvMsgHeaderParseProc(LPCONNECTION_T pConn, bool &bIsFlood)
  * =================================================================*/
 void CSocket::RecvMsgPacketParseProc(LPCONNECTION_T pConn, bool &bIsFlood)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::RecvMsgPacketParseProc track");
+
     if(bIsFlood == false)
     {
         /* Enter the message queue and trigger the thread to process the message */
@@ -302,6 +316,9 @@ void CSocket::RecvMsgPacketParseProc(LPCONNECTION_T pConn, bool &bIsFlood)
  * ======================================================================================*/
 ssize_t CSocket::SendProc(LPCONNECTION_T pConn, char *pSendBuff, ssize_t uiSendLen)  
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::SendProc track");
+
     ssize_t n = 0;
     for ( ;; )
     {
@@ -361,6 +378,9 @@ ssize_t CSocket::SendProc(LPCONNECTION_T pConn, char *pSendBuff, ssize_t uiSendL
  * ======================================================================================*/
 void CSocket::EpollEventWriteRequestHandler(LPCONNECTION_T pConn)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::EpollEventWriteRequestHandler track");
+
     CMemory *pMemory = CMemory::GetInstance();
     /* send message */
     ssize_t uiSendSize = SendProc(pConn, pConn->pSendMsgBuff, pConn->iSendMsgLen);
@@ -422,7 +442,9 @@ void CSocket::EpollEventWriteRequestHandler(LPCONNECTION_T pConn)
  * parameter:
  * =================================================================*/
 void CSocket::ThreadRecvMsgHandleProc(char *pMsgBuf)
-{   
+{
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::ThreadRecvMsgHandleProc track");
     return;
 }
 

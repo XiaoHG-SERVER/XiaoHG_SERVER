@@ -11,11 +11,13 @@
 #include <errno.h> 
 #include <sys/ioctl.h> 
 #include <arpa/inet.h>
-#include "XiaoHG_c_conf.h"
-#include "XiaoHG_macro.h"
-#include "XiaoHG_global.h"
-#include "XiaoHG_func.h"
-#include "XiaoHG_c_socket.h"
+#include "XiaoHG_C_Conf.h"
+#include "XiaoHG_Macro.h"
+#include "XiaoHG_Global.h"
+#include "XiaoHG_Func.h"
+#include "XiaoHG_C_Socket.h"
+
+#define __THIS_FILE__ "XiaoHG_C_SocketAccpet.cxx"
 
 /* =================================================================
  * auth: XiaoHG
@@ -27,6 +29,9 @@
  * =================================================================*/
 void CSocket::EpollEventAcceptHandler(LPCONNECTION_T pOldConn)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::EpollEventAcceptHandler track");
+
     int iErr = 0;   /* errno */
     int iSockFd = 0;    /* socket id */
     static bool iIsAccept4 = true;  /* defult use accept4 */

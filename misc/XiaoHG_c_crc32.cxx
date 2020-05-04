@@ -1,11 +1,13 @@
 ﻿
-//和 crc32校验算法 有关的代码
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "XiaoHG_C_Crc32.h"
+#include "XiaoHG_Func.h"
+#include "XiaoHG_Macro.h"
+#include "XiaoHG_Log.h"
 
-#include "XiaoHG_c_crc32.h"
+#define __THIS_FILE__ "XiaoHG_C_Crc32.cxx"
 
 CCRC32 *CCRC32::m_Instance = NULL;
 
@@ -18,6 +20,9 @@ CCRC32::~CCRC32(){}
 //unsigned long CCRC32::Reflect(unsigned long ref, char ch)
 unsigned int CCRC32::Reflect(unsigned int ref, char ch)
 {
+	/* function track */
+    //XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CCRC32::Reflect track");
+
 	// Used only by Init_CRC32_Table()
 	//unsigned long value(0);
     unsigned int value(0);
@@ -33,6 +38,9 @@ unsigned int CCRC32::Reflect(unsigned int ref, char ch)
 
 void CCRC32::Init_CRC32_Table()
 {
+	/* function track */
+    //XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CCRC32::Init_CRC32_Table track");
+
 	// This is the official polynomial used by CRC-32 in PKZip, WinZip and Ethernet. 
 	//unsigned long ulPolynomial = 0x04c11db7;
     unsigned int ulPolynomial = 0x04c11db7;

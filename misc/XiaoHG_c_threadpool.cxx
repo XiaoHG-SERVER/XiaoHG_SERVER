@@ -1,11 +1,13 @@
 ﻿
 #include <stdarg.h>
 #include <unistd.h>
-#include "XiaoHG_global.h"
-#include "XiaoHG_func.h"
-#include "XiaoHG_c_threadpool.h"
-#include "XiaoHG_c_memory.h"
-#include "XiaoHG_macro.h"
+#include "XiaoHG_Global.h"
+#include "XiaoHG_Func.h"
+#include "XiaoHG_C_ThreadPool.h"
+#include "XiaoHG_C_Memory.h"
+#include "XiaoHG_Macro.h"
+
+#define __THIS_FILE__ "XiaoHG_C_ThreadPool.cxx"
 
 pthread_mutex_t CThreadPool::m_pThreadMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t CThreadPool::m_pThreadCond = PTHREAD_COND_INITIALIZER;
@@ -14,7 +16,10 @@ pthread_cond_t CThreadPool::m_pThreadCond = PTHREAD_COND_INITIALIZER;
 bool CThreadPool::m_Shutdown = false;      
 
 CThreadPool::CThreadPool()
-{
+{  
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CThreadPool::CThreadPool track");
+
     m_iRunningThreadCount = 0;
     m_LastAlartNotEnoughThreadTime = 0;
     m_iRecvMsgQueueCount = 0;
@@ -35,6 +40,9 @@ CThreadPool::~CThreadPool()
  * =================================================================*/
 void CThreadPool::ClearMsgRecvQueue()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CThreadPool::ClearMsgRecvQueue track");
+
 	char *pTmpMempoint = NULL;
 	CMemory *pMemory = CMemory::GetInstance();
 	while(!m_MsgRecvQueue.empty())
@@ -55,6 +63,9 @@ void CThreadPool::ClearMsgRecvQueue()
  * =================================================================*/
 int CThreadPool::Create(int iThreadCount)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CThreadPool::Create track");
+
     ThreadItem *pNewThreadItem = NULL;
     /* create thread numbers */
     for(int i = 0; i < iThreadCount; i++)
@@ -94,6 +105,9 @@ int CThreadPool::Create(int iThreadCount)
  * =================================================================*/
 void* CThreadPool::ThreadFunc(void *pThreadData)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CThreadPool::ThreadFunc track");
+
     CMemory *pMemory = CMemory::GetInstance();
     /* This is a static member function, there is no this pointer */
     ThreadItem *pThread = static_cast<ThreadItem *>(pThreadData);
@@ -186,6 +200,9 @@ void* CThreadPool::ThreadFunc(void *pThreadData)
  * =================================================================*/
 void CThreadPool::PutMsgRecvQueueAndSignal(char *pRecvMsgBuff)
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CThreadPool::PutMsgRecvQueueAndSignal track");
+
     /* m_pThreadMutex lock */
     if(pthread_mutex_lock(&m_pThreadMutex) != 0)
     {
@@ -202,7 +219,7 @@ void CThreadPool::PutMsgRecvQueueAndSignal(char *pRecvMsgBuff)
         return;
     }
     /* Can excite the thread to work */
-    Call();
+    CallRecvMsgHandleThread();
     return;
 }
 
@@ -214,8 +231,11 @@ void CThreadPool::PutMsgRecvQueueAndSignal(char *pRecvMsgBuff)
  * discription: Here comes the task, transfer the threads in a thread pool to work.
  * parameter:
  * =================================================================*/
-void CThreadPool::Call()
+void CThreadPool::CallRecvMsgHandleThread()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CThreadPool::CallRecvMsgHandleThread track");
+
     /* Wake up a thread waiting for the condition, that is, 
      * a thread that can be stuck in pthread_cond_wait() */
     if(pthread_cond_signal(&m_pThreadCond) != 0)
@@ -252,6 +272,9 @@ void CThreadPool::Call()
  * =================================================================*/
 int CThreadPool::StopAll()
 {
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CThreadPool::StopAll track");
+
     /* Ensure that the function will not be called repeatedly */
     if(m_Shutdown == true)
     {

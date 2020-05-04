@@ -1,12 +1,15 @@
 ﻿
+#Auther: XiaoHG
+#Version: V1.1.1.20200503
+
 #.PHONY:all clean 
 
 ifeq ($(DEBUG),true)
 #-g是生成调试信息。GNU调试器可以利用该信息
-CC = g++ -std=c++11 -g 
+CC = g++ -std=c++11 -g -Werror
 VERSION = debug
 else
-CC = g++ -std=c++11
+CC = g++ -std=c++11 -Werror
 VERSION = release
 endif
 
@@ -55,11 +58,11 @@ LINK_OBJ += $(OBJS)
 #如下这行会是开始执行的入口，执行就找到依赖项$(BIN)去执行了，同时，这里也依赖了$(DEPS)，这样就会生成很多.d文件了
 all:$(DEPS) $(OBJS) $(BIN)
 
-#这里是诸多.d文件被包含进来，每个.d文件里都记录着一个.o文件所依赖哪些.c和.h文件。内容诸如 XiaoHG.o: XiaoHG.c XiaoHG_func.h
+#这里是诸多.d文件被包含进来，每个.d文件里都记录着一个.o文件所依赖哪些.c和.h文件。内容诸如 XiaoHG.o: XiaoHG.c XiaoHG_Func.h
 #我们做这个的最终目的说白了是，即便.h被修改了，也要让make重新编译我们的工程，否则，你修改了.h，make不会重新编译，那不行的
 #有必要先判断这些文件是否存在，不然make可能会报一些.d文件找不到
 ifneq ("$(wildcard $(DEPS))","")   #如果不为空,$(wildcard)是函数【获取匹配模式文件名】，这里 用于比较是否为""
-include $(DEPS)  
+include $(DEPS)
 endif
 
 #----------------------------------------------------------------1begin------------------
@@ -88,11 +91,11 @@ $(LINK_OBJ_DIR)/%.o:%.cxx
 #----------------------------------------------------------------3begin-----------------
 #我们现在希望当修改一个.h时，也能够让make自动重新编译我们的项目，所以，我们需要指明让.o依赖于.h文件
 #那一个.o依赖于哪些.h文件，我们可以用“gcc -MM c程序文件名” 来获得这些依赖信息并重定向保存到.d文件中
-#.d文件中的内容可能形如：XiaoHG.o: XiaoHG.c XiaoHG_func.h
+#.d文件中的内容可能形如：XiaoHG.o: XiaoHG.c XiaoHG_Func.h
 #%.d:%.c
 $(DEP_DIR)/%.d:%.cxx
 #gcc -MM $^ > $@
-#.d文件中的内容形如：XiaoHG.o: XiaoHG.c XiaoHG_func.h ../signal/XiaoHG_signal.h，但现在的问题是我们的.o文件已经放到了专门的目录
+#.d文件中的内容形如：XiaoHG.o: XiaoHG.c XiaoHG_Func.h ../signal/XiaoHG_signal.h，但现在的问题是我们的.o文件已经放到了专门的目录
 # 所以我们要正确指明.o文件路径这样，对应的.h,.c修改后，make时才能发现，这里需要用到sed文本处理工具和一些正则表达式语法，不必深究
 #gcc -MM $^ | sed 's,\(.*\)\.o[ :]*,$(LINK_OBJ_DIR)/\1.o:,g' > $@
 #echo 中 -n表示后续追加不换行
@@ -102,7 +105,7 @@ $(DEP_DIR)/%.d:%.cxx
 #	gcc -I$(INCLUDE_PATH) -MM $^ >> $@
 	$(CC) -I$(INCLUDE_PATH) -MM $^ >> $@
 
-#上行处理后，.d文件中内容应该就如：/mnt/hgfs/linux/XiaoHG/app/link_obj/XiaoHG.o: XiaoHG.c XiaoHG_func.h ../signal/XiaoHG_signal.h
+#上行处理后，.d文件中内容应该就如：/mnt/hgfs/linux/XiaoHG/app/link_obj/XiaoHG.o: XiaoHG.c XiaoHG_Func.h ../signal/XiaoHG_signal.h
 
 #----------------------------------------------------------------4begin-----------------
 

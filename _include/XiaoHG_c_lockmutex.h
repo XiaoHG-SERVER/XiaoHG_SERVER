@@ -2,7 +2,7 @@
 #ifndef __XiaoHG_LOCKMUTEX_H__
 #define __XiaoHG_LOCKMUTEX_H__
 
-#include <pthread.h> 
+#include <pthread.h>
 
 /* This class is used to automatically release the mutex 
  * to prevent the situation of forgetting to call pthread_mutex_unlock */

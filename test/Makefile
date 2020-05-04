@@ -7,14 +7,14 @@ INCLUDE_PATH = -I ../_include -I test_include/
 SRCS = $(wildcard *.cxx)
 OBJS = $(SRCS:.cxx=.o)
 
-main: main.o XiaoHG_c_crc32.o $(OBJS)
+main: main.o XiaoHG_C_Crc32.o $(OBJS)
 	$(CC) -o $@ $^ -lpthread
 
 main.o: main.cxx
 	$(CC) $(INCLUDE_PATH) -o $@ -c $^
 
-XiaoHG_c_crc32.o: ../misc/XiaoHG_c_crc32.cxx
-	$(CC) $(INCLUDE_PATH) -o $@ -c ../misc/XiaoHG_c_crc32.cxx
+XiaoHG_C_Crc32.o: ../misc/XiaoHG_C_Crc32.cxx
+	$(CC) $(INCLUDE_PATH) -o $@ -c ../misc/XiaoHG_C_Crc32.cxx
 
 %.o: %.cxx
 	$(CC) $(INCLUDE_PATH) -o $@ -c $^

@@ -9,26 +9,62 @@
 #include <time.h> 
 #include <fcntl.h> 
 #include <errno.h> 
-#include "XiaoHG_c_conf.h"
-#include "XiaoHG_macro.h"
-#include "XiaoHG_global.h"
+#include "XiaoHG_C_Conf.h"
+#include "XiaoHG_Macro.h"
+#include "XiaoHG_Global.h"
+
+#define __THIS_FILE__ "XiaoHG_Log.cxx"
 
 /* level print */
 static u_char g_stErriLevels[][20]  = 
 {
-    {"stderr"},    /* 0 */
-    {"emerg"},     /* 1 */
+    {"stderr"},     /* 0 */
+    {"emerg"},      /* 1 */
     {"alert"},     /* 2 */
-    {"crit"},      /* 3 */
+    {"serious"},      /* 3 */
     {"error"},     /* 4 */
     {"warn"},      /* 5 */
     {"notice"},    /* 6 */
     {"info"},      /* 7 */
-    {"debug"}      /* 8 */
+    {"debug"},      /* 8 */
+    {"track"}       /* 9 */
 };
-#define MAX_LOG_STRLEN   2048
 
-#define TEST_LOG 0
+/* Max log string length */
+#define MAX_LOG_STRLEN 2048
+
+/* =================================================================
+ * auth: XiaoHG
+ * date: 2020.04.23
+ * test time: 2020.04.23 pass
+ * function name: LogInit
+ * discription: init log file, open log file.
+ * =================================================================*/
+
+int LogInit()
+{
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "LogInit track");
+    
+    u_char *pLogFile = NULL;
+    CConfig *pConfig = CConfig::GetInstance();
+    pLogFile = (u_char *)pConfig->GetString("Log");
+    if(pLogFile == NULL)
+    {
+        //default log file
+        pLogFile = (u_char *)DEFAULT_LOG_PATH; 
+    }
+    g_stLog.iLogLevel = pConfig->GetIntDefault("LogLevel", LOG_LEVEL_NOTICE);
+    XiaoHG_Log(LOG_STD, LOG_LEVEL_INFO, 0, "g_stLog.iLogLevel = %d", g_stLog.iLogLevel);
+    g_stLog.iLogFd = open((const char *)pLogFile, O_WRONLY|O_APPEND|O_CREAT, 0644);  
+    if (g_stLog.iLogFd == -1)
+    {
+        XiaoHG_Log(LOG_STD, LOG_LEVEL_ALERT, errno, " could not open error log file: open \"%s\" failed", pLogFile);
+        return XiaoHG_ERROR;
+    }
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "Init log file is successful, g_stLog.iLogLevel = %d", g_stLog.iLogLevel);
+    return XiaoHG_SUCCESS;
+}
 
 /* =================================================================
  * auth: XiaoHG
@@ -47,6 +83,13 @@ void SetLogLevel(int iErrorLevel)
  * date: 2020.04.23
  * test time: 2020.04.23 pass
  * function name: XiaoHG_Log
+ * discription: log information
+ * parameter:
+ *      iLogType: three types(LOG_FILE: write to log file; 
+ *                            LOG_STD: Standard output;
+ *                            LOG_ALL: Both of the above).
+ *      iLogLevel: log level(set in the config file).
+ *      iErrCode: errno(can be 0, this Means no output)
  * =================================================================*/
 //(such)2020/04/09 20:32:40 [alert] [pid: 30112] [errno: 98, Address already in use] [XiaoHG]: ProcessGetStatus() pid = 30113 exited on signal 11!
 void XiaoHG_Log(int iLogType, int iLogLevel, int iErrCode, const char* pFmt, ...)
@@ -123,34 +166,4 @@ void XiaoHG_Log(int iLogType, int iLogLevel, int iErrCode, const char* pFmt, ...
     /* write log buff to LogFile*/
     //write(iFileHandle, pLogStr, strlen(pLogStr));
     return;
-}
-
-
-/* =================================================================
- * auth: XiaoHG
- * date: 2020.04.23
- * test time: 2020.04.23 pass
- * function name: LogInit
- * discription: init log file, open log file.
- * =================================================================*/
-
-int LogInit()
-{
-    u_char *pLogFile = NULL;
-    CConfig *pConfig = CConfig::GetInstance();
-    pLogFile = (u_char *)pConfig->GetString("Log");
-    if(pLogFile == NULL)
-    {
-        //default log file
-        pLogFile = (u_char *)DEFAULT_LOG_PATH; 
-    }
-    g_stLog.iLogLevel = pConfig->GetIntDefault("LogLevel", LOG_LEVEL_NOTICE);
-    g_stLog.iLogFd = open((const char *)pLogFile, O_WRONLY|O_APPEND|O_CREAT, 0644);  
-    if (g_stLog.iLogFd == -1)
-    {
-        XiaoHG_Log(LOG_STD, LOG_LEVEL_ALERT, errno, " could not open error log file: open \"%s\" failed", pLogFile);
-        return XiaoHG_ERROR;
-    }
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "Init log file is successful");
-    return XiaoHG_SUCCESS;
 }

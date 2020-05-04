@@ -6,9 +6,11 @@
 #include <signal.h> 
 #include <errno.h> 
 #include <unistd.h>
-#include "XiaoHG_func.h"
-#include "XiaoHG_macro.h"
-#include "XiaoHG_c_conf.h"
+#include "XiaoHG_Func.h"
+#include "XiaoHG_Macro.h"
+#include "XiaoHG_C_Conf.h"
+
+#define __THIS_FILE__ "XiaoHG_Event.cxx"
 
 /* =================================================================
  * auth: XiaoHG
@@ -19,7 +21,10 @@
  * parameter:
  * =================================================================*/
 void ProcessEventsAndTimers()
-{   
+{
+    /* function track */
+    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "ProcessEventsAndTimers track");
+
     /* -1: always waiting */
     g_LogicSocket.EpolWaitlProcessEvents(-1);
     /* printf dbg information */

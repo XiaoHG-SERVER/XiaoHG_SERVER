@@ -1,8 +1,8 @@
-/mnt/hgfs/linux/XiaoHG_SERVER/app/link_obj/XiaoHG_setproctitle.o: XiaoHG_setproctitle.cxx \
- /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_global.h \
- /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_c_slogic.h \
- /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_c_socket.h \
- /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_comm.h \
- /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_c_threadpool.h \
- /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_func.h \
- /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_macro.h
+/mnt/hgfs/linux/XiaoHG_SERVER/app/link_obj/XiaoHG_SetProcTitle.o: XiaoHG_SetProcTitle.cxx \
+ /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_Global.h \
+ /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_C_SLogic.h \
+ /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_C_Socket.h \
+ /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_Comm.h \
+ /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_C_ThreadPool.h \
+ /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_Func.h \
+ /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_Macro.h
