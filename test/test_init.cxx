@@ -1,45 +1,41 @@
 
+/*
+ * Copyright (C/C++) XiaoHG
+ * Copyright (C/C++) XiaoHG_SERVER
+ */
+
 #include <stdio.h>
-#include <stdlib.h>
+#include <errno.h>
 #include <string.h>
-#include <stdint.h>    //uintptr_t
-#include <stdarg.h>    //va_start....
-#include <unistd.h>    //STDERR_FILENO等
-#include <sys/time.h>  //gettimeofday
-#include <time.h>      //localtime_r
-#include <fcntl.h>     //open
-#include <errno.h>     //errno
-#include <sys/socket.h>
-#include <sys/ioctl.h> //ioctl
+#include <unistd.h>
 #include <arpa/inet.h>
-
+#include <sys/socket.h>
 #include "test_common.h"
-#include "test_include.h"
+#include "test_func.h"
+#include "test_global.h"
 
-int socket_init(int &iSocketFd)
+int SocketInit()
 {
-	//连接
-	//(1)创建socket
-	iSocketFd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (iSocketFd == -1)
+	g_iSocketFd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (g_iSocketFd == -1)
 	{
-		printf("[%s: %d]socket()失败!\n", __FILE__, __LINE__);
+		printf("[%s: %d]socket() failed!\n", __FILE__, __LINE__);
 		return -1;
 	}
-	//(2)连接服务器
+
 	struct sockaddr_in server_in;
 	memset(&server_in, 0, sizeof(sockaddr_in));
 	server_in.sin_family = AF_INET;
 	server_in.sin_port = htons(80);
 	server_in.sin_addr.s_addr = inet_addr("192.168.13.132");
 
-	if (connect(iSocketFd, (struct sockaddr *)&server_in, sizeof(sockaddr_in)) == -1)
+	if (connect(g_iSocketFd, (struct sockaddr *)&server_in, sizeof(sockaddr_in)) == -1)
 	{
-		printf("[%s: %d]connect()失败! errno = %d\n", __FILE__, __LINE__, errno);
-		close(iSocketFd);
+		printf("[%s: %d]connect() failed! errno = %d\n", __FILE__, __LINE__, errno);
+		close(g_iSocketFd);
 		return -1;
 	}
 
-	printf("\n[%s: %d]connect()成功! iSocketFd = %d\n", __FILE__, __LINE__, iSocketFd);
+	printf("\n[%s: %d]connect() successful! g_iSocketFd = %d\n", __FILE__, __LINE__, g_iSocketFd);
 	return 0;
 }

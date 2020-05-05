@@ -1,45 +1,47 @@
 
+/*
+ * Copyright (C/C++) XiaoHG
+ * Copyright (C/C++) XiaoHG_SERVER
+ */
+
 #include <stdio.h>
-#include <stdlib.h>
-#include<fcntl.h>
-#include<unistd.h>
-#include <sys/socket.h>
-#include <unistd.h>  //usleep
+#include <unistd.h>
 #include "test_global.h"
-#include "test_include.h"
+#include "test_func.h"
 
-int main(int argc, char *const *argv)
+/* global socket fd */
+int g_iSocketFd;
+
+int main(int argc, char *argv[])
 {
-	for (int i = 0; i < 1; i++)
+	for (int i = 0; i < 10; i++)
 	{
-		fork();
+		//fork();
 	}
-	int iSocketFd = 0;
-	int iCode = 0;
 
-    if(socket_init(iSocketFd) == -1)
+    if(SocketInit() == -1)
 	{
-		printf("[%s: %d]main()/socket_init()失败!\n", __FILE__, __LINE__);
+		printf("[%s: %d]main()/SocketInit() failed!\n", __FILE__, __LINE__);
 		return 0;
 	}
 
-	if(thread_init(iSocketFd) == -1)
+	if(ThreadInit() == -1)
 	{
-		printf("[%s: %d]main()/thread_init()失败!\n", __FILE__, __LINE__);
+		printf("[%s: %d]main()/ThreadInit() failed!\n", __FILE__, __LINE__);
 		return 0;
 	}
 
 	while (true)
 	{
-		if(choose_sendmsg(iSocketFd, iCode) == -1)
+		if(ChooseSendMsg() == -1)
 		{
-			printf("[%s: %d]main()/choose_sendmsg()失败!\n", __FILE__, __LINE__);
-			close(iSocketFd);
+			printf("[%s: %d]main()/ChooseSendMsg() failed!\n", __FILE__, __LINE__);
+			close(g_iSocketFd);
 			return -1;
 		}
 	}
 
-	close(iSocketFd);
+	close(g_iSocketFd);
 	return 0;
 }
 

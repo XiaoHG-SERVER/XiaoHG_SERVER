@@ -1,4 +1,9 @@
 
+/*
+ * Copyright (C/C++) XiaoHG
+ * Copyright (C/C++) XiaoHG_SERVER
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -10,44 +15,52 @@
 #include "XiaoHG_C_Crc32.h"
 #include "test_common.h"
 #include "test_global.h"
-#include "test_include.h"
+#include "test_func.h"
 
-int g_iSocketFd = 0;
+/* defauled receive message length is 1024 */
+#define MAX_RECVMSG_LENGTH 1024
 
-void *thread_recvmsg_func(void *pThreadData)
+void *RecvMsgThreadProc(void *pThreadData)
 {
-    printf("[%s: %d]thread_recv_func()接收数据线程启动！\n", __FILE__, __LINE__);
+    printf("[%s: %d]RecvMsgThreadProc() 接收数据线程启动\n", __FILE__, __LINE__);
 
-    int err = 0;
-    int iSocketFd = *((int *)pThreadData);
-
-    int iRecvLen = 1024;
+    int iErr = 0;
+    int iRecvLen = MAX_RECVMSG_LENGTH;
     char *pRecvBuf = (char *)malloc(iRecvLen * sizeof(char));
     memset(pRecvBuf, 0, iRecvLen);
 
     while (true)
     {
-        err = recv_data(g_iSocketFd, pRecvBuf, iRecvLen);
-        if(err == -1)
+        iErr = RecvData(pRecvBuf, iRecvLen);
+        if(iErr == -1)
         {
-            printf("[%s: %d]thread_recvmsg_func()/recv_data()数据接收失败！errno = %d\n", __FILE__, __LINE__, errno);
+            printf("[%s: %d]RecvMsgThreadProc()/recv_data() 数据接收失败, errno = %d\n", __FILE__, __LINE__, errno);
             break;
         }
 
-        if (err == 0)
+        if (iErr == 0)
         {
-            printf("[%s: %d]thread_recvmsg_func()/recv_data() 服务器断开！\n", __FILE__, __LINE__);
+            printf("[%s: %d]RecvMsgThreadProc()/recv_data() 服务器断开\n", __FILE__, __LINE__);
             break;
         }
 
         LPCOMM_PKG_HEADER pPkgHeader = (LPCOMM_PKG_HEADER)pRecvBuf;
-        if (pPkgHeader->msgCode == 0)   
+        unsigned short sMsgCode = htons(pPkgHeader->msgCode);
+
+        switch (sMsgCode)
         {
-            printf("[%s: %d]thread_recvmsg_func()收到一个心跳回复！\n", __FILE__, __LINE__);
-        }
-        else
-        {
-            printf("[%s: %d]thread_recvmsg_func()收到数据回复！\n", __FILE__, __LINE__);
+        case HB_CODE:
+            printf("[%s: %d]RecvMsgThreadProc() 收到一个心跳回复\n", __FILE__, __LINE__);
+            break;
+        case REGISTER_CODE:
+            printf("[%s: %d]RecvMsgThreadProc() 收到一个注册回复\n", __FILE__, __LINE__);
+            break;
+        case LINGIN_CODE:
+            printf("[%s: %d]RecvMsgThreadProc() 收到一个登录回复\n", __FILE__, __LINE__);
+            break;
+        default:
+            printf("[%s: %d]RecvMsgThreadProc() 不应该收到这个消息\n", __FILE__, __LINE__);
+            break;
         }
     }
     
@@ -57,89 +70,66 @@ void *thread_recvmsg_func(void *pThreadData)
     return (void *)0;
 }
 
-void *thread_ping_func(void *pThreadData)
+void *HeartBeatThreadProc(void *pThreadData)
 {
-
-    int iSocketFd = *((int *)pThreadData);
-    CCRC32 *pCrc32 = CCRC32::GetInstance();
-	char *pSendBuf = (char *)malloc(g_iLenPkgHeader);
-
-	LPCOMM_PKG_HEADER pInfoHead;
-	pInfoHead = (LPCOMM_PKG_HEADER)pSendBuf;
-    pInfoHead->crc32 = 0;
-	pInfoHead->crc32 = htons(pInfoHead->crc32);
-	pInfoHead->msgCode = 0;
-	pInfoHead->msgCode = htons(pInfoHead->msgCode);
-	pInfoHead->pkgLen = htons(g_iLenPkgHeader);
-
+    printf("[%s: %d]SendMsgThreadProc() 心跳检测线程启动\n", __FILE__, __LINE__);
     while(true)
     {
         usleep(20000 * 1000);
-        printf("[%s: %d]thread_send_func()发送心跳数据 20s发一个心跳！ iSocketFd = %d, pid = %d\n", __FILE__, __LINE__, g_iSocketFd, getpid());
-        if(send_pingmsg(g_iSocketFd) == -1)
+        if(SendHeartBeatMsg() == -1)
         {
-            printf("[%s: %d]thread_send_func()/send_pingmsg()失败 errno: %d!\n", __FILE__, __LINE__, errno);
+            printf("[%s: %d]HeartbeatThreadProc()/SendHeartBeatMsg() failed, errno: %d!\n", __FILE__, __LINE__, errno);
             break;
         }
-        printf("[%s: %d]thread_ping_func()心跳消息发送完毕!\n", __FILE__, __LINE__);
+        printf("[%s: %d]HeartbeatThreadProc() 心跳消息发送完毕\n", __FILE__, __LINE__);
     }
 
     return (void*)0;
 }
 
-void *thread_send_func(void *pThreadData)
+void *SendMsgThreadProc(void *pThreadData)
 {
-    printf("[%s: %d]thread_send_func()发送数据线程启动！\n", __FILE__, __LINE__);
-    int i = 1;
+    printf("[%s: %d]SendMsgThreadProc() 发送数据线程启动\n", __FILE__, __LINE__);
+
     while(true)
     {
-        
         usleep(random() % 2000 * 1000);
-        printf("[%s: %d]thread_send_func()发送send_login数据！ iSocketFd = %d, pid = %d\n", __FILE__, __LINE__, g_iSocketFd, getpid());
-        if(send_login(g_iSocketFd) == -1)
+        if(SendLoginMsg() == -1)
         {
-            printf("[%s: %d]thread_send_func()/send_login()失败 errno: %d!\n", __FILE__, __LINE__, errno);
+            printf("[%s: %d]SendMsgThreadProc()/SendLoginMsg() failed, errno: %d!\n", __FILE__, __LINE__, errno);
             break;
         }
        
         usleep(random() % 2000 * 1000);
-        printf("[%s: %d]thread_send_func()发送send_register数据！ iSocketFd = %d, pid = %d\n", __FILE__, __LINE__, g_iSocketFd, getpid());
-        if(send_register(g_iSocketFd) == -1)
+        if(SendRegisterMsg() == -1)
         {
-            printf("[%s: %d]thread_send_func()/send_login()失败 errno: %d!\n", __FILE__, __LINE__, errno);
+            printf("[%s: %d]SendMsgThreadProc()/SendRegisterMsg() failed, errno: %d!\n", __FILE__, __LINE__, errno);
             break;
         }
-        
     }
 
     return (void*)0;
 }
 
-int thread_init(int iSocketFd)
+int ThreadInit()
 {
-    int err = 0;
-    pthread_t ThreadFd = 0;
-    g_iSocketFd = iSocketFd;
+    pthread_t ThreadFd[3] = { 0 };
 
-    err = pthread_create(&ThreadFd, NULL, thread_recvmsg_func, (void *)&iSocketFd);
-    if(err == -1)
+    if(pthread_create(&ThreadFd[0], NULL, RecvMsgThreadProc, (void *)0) == -1)
     {
-        printf("[%s: %d]create_thread()/pthread_create()创建线程失败！\n", __FILE__, __LINE__);
+        printf("[%s: %d]ThreadInit()/pthread_create() 创建线程失败, errno = %d\n", __FILE__, __LINE__, errno);
         return -1;
     }
     
-    err = pthread_create(&ThreadFd, NULL, thread_ping_func, (void *)&iSocketFd);
-    if(err == -1)
+    if(pthread_create(&ThreadFd[1], NULL, HeartBeatThreadProc, (void *)0) == -1)
     {
-        printf("[%s: %d]create_thread()/pthread_create()创建线程失败！\n", __FILE__, __LINE__);
+        printf("[%s: %d]ThreadInit()/pthread_create() 创建线程失败, errno = %d\n", __FILE__, __LINE__, errno);
         return -1;
     }
     
-
-    err = pthread_create(&ThreadFd, NULL, thread_send_func, (void *)&iSocketFd);
-    if(err == -1)
+    if(pthread_create(&ThreadFd[2], NULL, SendMsgThreadProc, (void *)0) == -1)
     {
-        printf("[%s: %d]create_thread()/pthread_create()创建线程失败！\n", __FILE__, __LINE__);
+        printf("[%s: %d]ThreadInit()/pthread_create() 创建线程失败, errno = %d\n", __FILE__, __LINE__, errno);
         return -1;
     }
 

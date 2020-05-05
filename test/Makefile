@@ -1,4 +1,6 @@
 
+# Copyright XiaoHG
+# Copyright XiaoHG_SERVER
 
 CC = g++ -std=c++11 -g 
 
