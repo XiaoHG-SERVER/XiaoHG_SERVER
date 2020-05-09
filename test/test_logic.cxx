@@ -1,7 +1,7 @@
 
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
@@ -25,11 +25,11 @@ int SendHeartBeatMsg()
 
 	LPCOMM_PKG_HEADER pInfoHead;
 	pInfoHead = (LPCOMM_PKG_HEADER)pSendBuf;
-	pInfoHead->crc32 = 0;
-	pInfoHead->crc32 = htons(pInfoHead->crc32);
-	pInfoHead->msgCode = HB_CODE;
-	pInfoHead->msgCode = htons(pInfoHead->msgCode);
-	pInfoHead->pkgLen = htons(g_iLenPkgHeader);
+	pInfoHead->iCrc32 = 0;
+	pInfoHead->iCrc32 = htons(pInfoHead->iCrc32);
+	pInfoHead->usMsgCode = HB_CODE;
+	pInfoHead->usMsgCode = htons(pInfoHead->usMsgCode);
+	pInfoHead->usPkgLen = htons(g_iLenPkgHeader);
 
 	if (SendData(pSendBuf, g_iLenPkgHeader) == -1)
 	{
@@ -52,16 +52,16 @@ int SendRegisterMsg()
 
 	LPCOMM_PKG_HEADER pInfoHead;
 	pInfoHead = (LPCOMM_PKG_HEADER)pSendBuf;
-	pInfoHead->msgCode = REGISTER_CODE;
-	pInfoHead->msgCode = htons(pInfoHead->msgCode);
-	pInfoHead->pkgLen = htons(g_iLenPkgHeader + sizeof(STRUCT_REGISTER));
+	pInfoHead->usMsgCode = REGISTER_CODE;
+	pInfoHead->usMsgCode = htons(pInfoHead->usMsgCode);
+	pInfoHead->usPkgLen = htons(g_iLenPkgHeader + sizeof(STRUCT_REGISTER));
 
 	LPSTRUCT_REGISTER pstSendRegister = (LPSTRUCT_REGISTER)(pSendBuf + g_iLenPkgHeader);
 	pstSendRegister->iType = htonl(100);
-	strcpy(pstSendRegister->username, "XiaoHG");
-	strcpy(pstSendRegister->password, "xiaohaige");
-	pInfoHead->crc32 = pCrc32->Get_CRC((unsigned char*)pstSendRegister, sizeof(STRUCT_REGISTER));
-	pInfoHead->crc32 = htonl(pInfoHead->crc32);
+	strcpy(pstSendRegister->UserName, "XiaoHG_Register");
+	strcpy(pstSendRegister->Password, "xiaohaige");
+	pInfoHead->iCrc32 = pCrc32->Get_CRC((unsigned char*)pstSendRegister, sizeof(STRUCT_REGISTER));
+	pInfoHead->iCrc32 = htonl(pInfoHead->iCrc32);
 	
     printf("[%s: %d]thread_send_func()发送注册数据：g_iSocketFd = %d, pid = %d\n", __FILE__, __LINE__, g_iSocketFd, getpid());
 	if (SendData(pSendBuf, g_iLenPkgHeader + sizeof(STRUCT_REGISTER)) == -1)
@@ -85,15 +85,15 @@ int SendLoginMsg()
 
 	LPCOMM_PKG_HEADER pInfoHead;
 	pInfoHead = (LPCOMM_PKG_HEADER)pSendBuf;
-	pInfoHead->msgCode = LINGIN_CODE;  
-	pInfoHead->msgCode = htons(pInfoHead->msgCode);
-	pInfoHead->pkgLen = htons(g_iLenPkgHeader + sizeof(STRUCT_LOGIN));
+	pInfoHead->usMsgCode = LINGIN_CODE;  
+	pInfoHead->usMsgCode = htons(pInfoHead->usMsgCode);
+	pInfoHead->usPkgLen = htons(g_iLenPkgHeader + sizeof(STRUCT_LOGIN));
 
 	LPSTRUCT_LOGIN pstSendLogin = (LPSTRUCT_LOGIN)(pSendBuf + g_iLenPkgHeader);
-	strcpy(pstSendLogin->username, "XiaoHG");
-	strcpy(pstSendLogin->password, "xiaohaige");
-	pInfoHead->crc32 = pCrc32->Get_CRC((unsigned char*)pstSendLogin, sizeof(STRUCT_LOGIN));
-	pInfoHead->crc32 = htonl(pInfoHead->crc32);
+	strcpy(pstSendLogin->UserName, "XiaoHG_Login");
+	strcpy(pstSendLogin->Password, "xiaohaige");
+	pInfoHead->iCrc32 = pCrc32->Get_CRC((unsigned char*)pstSendLogin, sizeof(STRUCT_LOGIN));
+	pInfoHead->iCrc32 = htonl(pInfoHead->iCrc32);
 	
     printf("[%s: %d]thread_send_func() 发送登录数据：g_iSocketFd = %d, pid = %d\n", __FILE__, __LINE__, g_iSocketFd, getpid());
 	if (SendData(pSendBuf, g_iLenPkgHeader + sizeof(STRUCT_LOGIN)) == -1)

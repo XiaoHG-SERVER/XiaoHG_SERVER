@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
@@ -26,7 +26,7 @@
 void InitSetProcTitle()
 { 
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "InitSetProcTitle track");
+    CLog::Log(LOG_LEVEL_TRACK, "InitSetProcTitle track");
 
     g_pEnvMem = new char[g_uiEnvNeedMem]; 
     memset(g_pEnvMem, 0, g_uiEnvNeedMem);
@@ -39,6 +39,8 @@ void InitSetProcTitle()
         environ[i] = ptmp;          /* point new memory */
         ptmp += size;
     }
+
+    CLog::Log("Init set Process Title successful");
     return;
 }
 
@@ -52,7 +54,7 @@ void InitSetProcTitle()
 int SetProcTitle(const char *pTitle)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "SetProcTitle track");
+    CLog::Log(LOG_LEVEL_TRACK, "SetProcTitle track");
 
     size_t iTitleLen = strlen(pTitle);                       /* get pTitle length */
     size_t iTitolLen = g_uiArgvNeedMem + g_uiEnvNeedMem;    /* argv and environ memory */
@@ -61,7 +63,7 @@ int SetProcTitle(const char *pTitle)
     if(iTitolLen <= iTitleLen)
     {
         /* new pTitle length to bit */
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_NOTICE, 0, "set the process pTitle to bit, but Does not affect operation");
+        CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "Set the process pTitle to bit, iTitleLen = %d", iTitleLen);
         return XiaoHG_ERROR;
     }
 
@@ -73,6 +75,6 @@ int SetProcTitle(const char *pTitle)
     size_t more = iTitolLen - iTitleLen;   /* clean more memory */
     memset(ptmp, 0, more);
     
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_NOTICE, 0, "Set the process pTitle \"%s\" successful", pTitle);
+    CLog::Log("Set the process pTitle \"%s\" successful", pTitle);
     return XiaoHG_SUCCESS;
 }

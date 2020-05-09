@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
@@ -28,12 +28,12 @@
 int DaemonInit()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "DaemonInit track");
+    CLog::Log(LOG_LEVEL_TRACK, "DaemonInit track");
 
     switch (fork())
     {
     case -1:/* fork failed */
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "create subsprocess failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "create subsprocess failed");
         return XiaoHG_ERROR;
     case 0:/* subprocess */
         break;
@@ -52,7 +52,7 @@ int DaemonInit()
      * which will have nothing to do with this subprocess */
     if (setsid() == -1)  
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "subsprocess set sid failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "subsprocess set sid failed");
         return XiaoHG_SUCCESS;
     }
 
@@ -63,21 +63,21 @@ int DaemonInit()
     int iSockFd = open("/dev/null", O_RDWR);
     if (iSockFd == -1) 
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "open \"/dev/null\" failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "open \"/dev/null\" failed");
         return XiaoHG_ERROR;
     }
 
     /* First close STDIN_FILENO */
     if (dup2(iSockFd, STDIN_FILENO) == -1)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "dup2(STDIN) failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "dup2(STDIN) failed");
         return XiaoHG_ERROR;
     }
 
     /* and than close STDIN_FILENO */
     if (dup2(iSockFd, STDOUT_FILENO) == -1) 
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "dup2(STDOUT_FILENO) failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "dup2(STDOUT_FILENO) failed");
         return XiaoHG_ERROR;
     }
 
@@ -86,11 +86,11 @@ int DaemonInit()
     {
         if (close(iSockFd) == -1)  
         {
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "close file handle: %d failed", iSockFd);
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "close file handle: %d failed", iSockFd);
             return XiaoHG_ERROR;
         }
     }
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "Init deamon process successful");
+    CLog::Log("Init deamon process successful");
     /* subprocess return */
     return XiaoHG_SUCCESS; 
 }

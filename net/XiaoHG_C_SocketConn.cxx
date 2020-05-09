@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
@@ -46,9 +46,6 @@ connection_s::~connection_s()
  * =================================================================*/
 void connection_s::GetOneToUse()
 {
-    /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "connection_s::GetOneToUse track");
-
     ++uiCurrentSequence;                        /* The serial number is increased by 1 during initialization */
     iSockFd = -1;                             /* in the beging = -1 */
     iRecvCurrentStatus = PKG_HD_INIT;           /* The packet receiving state is in the initial state, ready to receive the data packet header [state machine] */
@@ -75,21 +72,21 @@ void connection_s::GetOneToUse()
 void connection_s::PutOneToFree()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "connection_s::PutOneToFree track");
+    CLog::Log(LOG_LEVEL_TRACK, "connection_s::PutOneToFree track");
 
     ++uiCurrentSequence;    /* Increase the serial number by 1 */
     /* free memory */
     /* pRecvMsgMemPointer munber for free */
     if(pRecvMsgMemPointer != NULL)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "PutOneToFree pRecvMsgMemPointer, pRecvMsgMemPointer = %p", pRecvMsgMemPointer);
+        CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "PutOneToFree pRecvMsgMemPointer, pRecvMsgMemPointer = %p", pRecvMsgMemPointer);
         //CMemory::GetInstance()->FreeMemory(pRecvMsgMemPointer);
     }
     /* If there is content in the buffer for sending data, 
      * you need to release the memory */
     if(pSendMsgMemPointer != NULL) 
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "PutOneToFree pSendMsgMemPointer, pSendMsgMemPointer = %p", pSendMsgMemPointer);
+        CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "PutOneToFree pSendMsgMemPointer, pSendMsgMemPointer = %p", pSendMsgMemPointer);
         //CMemory::GetInstance()->FreeMemory(pSendMsgMemPointer);
     }
 }
@@ -105,7 +102,7 @@ void connection_s::PutOneToFree()
 void CSocket::InitConnectionPool()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::InitConnectionPool track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::InitConnectionPool track");
 
     LPCONNECTION_T pConn = NULL;
     CMemory *pMemory = CMemory::GetInstance();   
@@ -123,7 +120,7 @@ void CSocket::InitConnectionPool()
     /* In the begining is some length */
     m_FreeConnectionCount = m_TotalConnectionCount = m_ConnectionList.size(); 
 
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "Init connection pool successful");
+    CLog::Log("Init connection pool successful");
     return;
 }
 
@@ -138,7 +135,7 @@ void CSocket::InitConnectionPool()
 LPCONNECTION_T CSocket::GetConnection(int iSockFd)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::GetConnection track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::GetConnection track");
 
     /* lock the pConnection list */
     CLock lock(&m_ConnectionMutex);
@@ -176,7 +173,7 @@ LPCONNECTION_T CSocket::GetConnection(int iSockFd)
 void CSocket::FreeConnection(LPCONNECTION_T pConn) 
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::FreeConnection track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::FreeConnection track");
 
     /* lock free pConnection list */
     CLock lock(&m_ConnectionMutex);
@@ -206,7 +203,7 @@ void CSocket::FreeConnection(LPCONNECTION_T pConn)
 void CSocket::PutConnectToRecyQueue(LPCONNECTION_T pConn)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::PutConnectToRecyQueue track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::PutConnectToRecyQueue track");
 
     bool bIsFind = false;
     std::list<LPCONNECTION_T>::iterator pos;
@@ -238,14 +235,14 @@ void CSocket::PutConnectToRecyQueue(LPCONNECTION_T pConn)
  * auth: XiaoHG
  * date: 2020.04.23
  * test time: 2020.04.23
- * function name: ServerRecyConnectionThread
+ * function name: ServerRecyConnectionThreadProc
  * discription: Thread to handle delayed pConnection recovery
  * parameter:
  * =================================================================*/
-void* CSocket::ServerRecyConnectionThread(void* pThreadData)
+void* CSocket::ServerRecyConnectionThreadProc(void* pThreadData)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::ServerRecyConnectionThread track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::ServerRecyConnectionThreadProc track");
 
     time_t CurrentTime = 0;
     LPCONNECTION_T pConn = NULL;
@@ -267,7 +264,7 @@ void* CSocket::ServerRecyConnectionThread(void* pThreadData)
             CurrentTime = time(NULL);
             if(pthread_mutex_lock(&pSocketObj->m_RecyConnQueueMutex) != 0)
             {
-                XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "pthread_mutex_lock(&pSocketObj->m_RecyConnQueueMutex) failed");
+                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_lock(&pSocketObj->m_RecyConnQueueMutex) failed");
                 return (void *)XiaoHG_ERROR;
             }
 
@@ -285,13 +282,14 @@ lblRRTD:
                     /* Before the release time, the pConnection continues to check */
                     continue;
                 }
-                XiaoHG_Log(LOG_FILE, LOG_LEVEL_INFO, 0, "ServerRecyConnectionThread, Delay the recovery time to recover the connection: socket id = %d", 
-                                                                                                                                    pConn->iSockFd);
+
+                CLog::Log(LOG_LEVEL_DEBUG, "ServerRecyConnectionThreadProc, Delay the recovery time to recover the connection: socket id = %d", pConn->iSockFd);
+                
                 /* Anything up to the release time, iThrowSendCount should be 0, here we add some logs */
                 if(pConn->iThrowSendCount > 0)
                 {
                     pConn->iThrowSendCount = 0;
-                    XiaoHG_Log(LOG_FILE, LOG_LEVEL_EMERG, errno, "pConn->iThrowSendCount = 0, Should not enter this branch");
+                    CLog::Log(LOG_LEVEL_EMERG, "pConn->iThrowSendCount = 0, Should not enter this branch");
                 }
                 /* Return the pConnection represented by the parameter pConn to the pConnection pool */
                 --pSocketObj->m_TotalRecyConnectionCount;
@@ -302,7 +300,7 @@ lblRRTD:
 
             if(pthread_mutex_unlock(&pSocketObj->m_RecyConnQueueMutex) != 0)
             {
-                XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "pthread_mutex_unlock(&pSocketObj->m_RecyConnQueueMutex) failed");
+                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_unlock(&pSocketObj->m_RecyConnQueueMutex) failed");
                 return (void *)XiaoHG_ERROR;
             }
         } /* end if */
@@ -316,7 +314,7 @@ lblRRTD:
                  * no matter whether there are other requirements that do not allow release, you have to hard release] */
                 if(pthread_mutex_lock(&pSocketObj->m_RecyConnQueueMutex) != 0)
                 {
-                    XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "pthread_mutex_lock(&pSocketObj->m_RecyConnQueueMutex) failed");
+                    CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_lock(&pSocketObj->m_RecyConnQueueMutex) failed");
                     return (void *)XiaoHG_ERROR;
                 }
 
@@ -335,11 +333,11 @@ lblRRTD:
                 
                 if(pthread_mutex_unlock(&pSocketObj->m_RecyConnQueueMutex) != 0)
                 {
-                    XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "m_RecyConnQueueMutex unlock failed");
+                    CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "m_RecyConnQueueMutex unlock failed");
                     return (void *)XiaoHG_ERROR;
                 }
             } /* end if */
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_NOTICE, 0, "g_bIsStopEvent is true, process exit");
+            CLog::Log(LOG_LEVEL_NOTICE, "g_bIsStopEvent is true, process exit");
             break; /* The whole program is about to exit, so break */
         }  /* end if */
     } /* end while */
@@ -358,7 +356,7 @@ lblRRTD:
 void CSocket::CloseConnectionImmediately(LPCONNECTION_T pConn)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::CloseConnectionImmediately track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::CloseConnectionImmediately track");
 
     FreeConnection(pConn); 
     if(pConn->iSockFd != -1)
@@ -380,7 +378,7 @@ void CSocket::CloseConnectionImmediately(LPCONNECTION_T pConn)
 void CSocket::ClearConnections()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::ClearConnections track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::ClearConnections track");
     
     LPCONNECTION_T pConn = NULL;
 	CMemory *pMemory = CMemory::GetInstance();

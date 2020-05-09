@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
@@ -13,13 +13,13 @@
 #include <arpa/inet.h>
 #include <sys/time.h>
 #include <XiaoHG_Macro.h>
-#include "XiaoHG_Func.h"
-#include "XiaoHG_C_Conf.h"
-#include "XiaoHG_C_Socket.h"
-#include "XiaoHG_C_Memory.h"
-#include "XiaoHG_C_ThreadPool.h"
-#include "XiaoHG_C_Crc32.h"
-#include "XiaoHG_C_SLogic.h"
+#include <XiaoHG_Func.h>
+#include <XiaoHG_C_Conf.h>
+#include <XiaoHG_C_Socket.h>
+#include <XiaoHG_C_Memory.h>
+#include <XiaoHG_C_ThreadPool.h>
+#include <XiaoHG_C_Crc32.h>
+#include <XiaoHG_C_SLogic.h>
 
 #define __THIS_FILE__ "XiaoHG.cxx"
 
@@ -31,42 +31,24 @@
  * =================================================================*/
 int main(int argc, char *argv[])
 {
-    /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "main track");
-
+    /* Iint a object config */
+    CConfig *pConfig = CConfig::GetInstance();
     /* Init global values */
     XiaoHG_Init(argc, argv);
-
-    /* load config file */
-    CConfig *pConfig = CConfig::GetInstance();
-    if(pConfig->Load("XiaoHG_SERVER.conf") == XiaoHG_ERROR)
-    {
-        if(LogInit() == XiaoHG_ERROR)
-        {
-            goto lblexit;
-        }
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "Load config file failed");
-        goto lblexit;
-    }
-
-    /* init log system -> open log file */
-    if(LogInit() == XiaoHG_ERROR)
-    {
-        XiaoHG_Log(LOG_STD, LOG_LEVEL_ERR, errno, "Init log file failed");
-        goto lblexit;
-    }
-        
+    
     /* signal init */
     if(InitSignals() != XiaoHG_SUCCESS) 
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "signal init failed");
+        CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "InitSignals() failed");
+        iExitCode = 1;
         goto lblexit;
     }
 
     /* Init socket */
     if(g_LogicSocket.Initalize() == XiaoHG_ERROR)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "socket init failed");
+        CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "g_LogicSocket.Initalize() failed");
+        iExitCode = 2;
         goto lblexit;
     }
 
@@ -80,7 +62,8 @@ int main(int argc, char *argv[])
         int iCdaemonResult = DaemonInit();
         if(iCdaemonResult == XiaoHG_ERROR)
         {
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "Init daemon process failed");
+            CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "DaemonInit() failed");
+            iExitCode = 3;
             goto lblexit;
         }
         /* parent return 1 */
@@ -98,11 +81,10 @@ int main(int argc, char *argv[])
     MasterProcessCycle();
 
 lblexit:
-
     /* free source */
     ProcessExitFreeResource();
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_NOTICE, 0, "hold process exit, byb");
-    return 0;
+    CLog::Log("XiaoHG_SERVER process exit, bye!");
+    return iExitCode;
 }
 
 

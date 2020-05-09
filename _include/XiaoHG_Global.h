@@ -1,15 +1,16 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
-#ifndef __XiaoHG_GBLDEF_H__
-#define __XiaoHG_GBLDEF_H__
+#ifndef __XiaoHG_GLOBAL_H__
+#define __XiaoHG_GLOBAL_H__
 
 #include <signal.h> 
 #include "XiaoHG_C_SLogic.h"
 #include "XiaoHG_C_ThreadPool.h"
+#include "XiaoHG_C_Log.h"
 
 /* Read config file, name length, content length*/
 #define CONF_ITEMNAME_LEN 50
@@ -22,12 +23,8 @@ typedef struct config_item_s
 	char ItemContent[CONF_ITEMCONTENT_LEN];	/* content */
 }CONF_ITEM, *LPCONF_ITEM;
 
-/* Log struct */
-typedef struct log_s
-{
-	int iLogLevel;
-	int iLogFd;
-}LOG_T;
+/* XiaoHG server process exit error code */
+extern int iExitCode;
 
 /* global vrg */
 extern size_t g_uiArgvNeedMem;
@@ -49,4 +46,4 @@ extern bool g_bIsStopEvent;
 
 extern int g_iErrCode;
 
-#endif //!__XiaoHG_GBLDEF_H__
+#endif //!__XiaoHG_GLOBAL_H__

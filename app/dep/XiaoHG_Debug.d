@@ -6,5 +6,5 @@
  /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_C_ThreadPool.h \
  /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_Global.h \
  /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_C_SLogic.h \
- /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_C_Socket.h \
- /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_C_ThreadPool.h
+ /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_C_ThreadPool.h \
+ /mnt/hgfs/linux/XiaoHG_SERVER/_include/XiaoHG_C_Log.h

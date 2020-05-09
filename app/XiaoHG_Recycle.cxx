@@ -1,7 +1,7 @@
 
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stddef.h>
@@ -17,6 +17,9 @@
  * =================================================================*/
 void ProcessExitFreeResource()
 {
+    /* Function track */
+    CLog::Log(LOG_LEVEL_TRACK, "ProcessExitFreeResource track");
+
     /* free Save global environment variables*/
     if(g_pEnvMem)
     {

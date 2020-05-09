@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #ifndef __XiaoHG_CONF_H__
@@ -22,29 +22,27 @@ public:
 private:
 	static CConfig *m_Instance;
 
+/* Singleton implementation */
 public:	
 	static CConfig* GetInstance()
 	{
-		/* function track */
-    	XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "GetInstance(CConfig) track");
-
 		if(m_Instance == NULL)
 		{
 			/* lock */
 			if(m_Instance == NULL)
 			{					
 				m_Instance = new CConfig();
-				static CGarhuishou cTmp; 
+				static CDeleteInstance cTmp; 
 			}
 			/* unlock */
 		}
 		return m_Instance;
 	}
 
-	class CGarhuishou
+	class CDeleteInstance
 	{
 	public:
-		~CGarhuishou()
+		~CDeleteInstance()
 		{
 			if (CConfig::m_Instance)
 			{						
@@ -54,8 +52,10 @@ public:
 		}
 	};
 	
+private:
+	int LoadConfigFileToList();
+
 public:
-    int Load(const char *pConfName);
 	const char *GetString(const char *pItemName);
 	int GetIntDefault(const char *pItemName, const int iDef);
 

@@ -1,7 +1,7 @@
 
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
@@ -45,7 +45,7 @@ void *RecvMsgThreadProc(void *pThreadData)
         }
 
         LPCOMM_PKG_HEADER pPkgHeader = (LPCOMM_PKG_HEADER)pRecvBuf;
-        unsigned short sMsgCode = htons(pPkgHeader->msgCode);
+        unsigned short sMsgCode = htons(pPkgHeader->usMsgCode);
 
         switch (sMsgCode)
         {

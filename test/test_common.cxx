@@ -1,7 +1,7 @@
 
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
@@ -16,7 +16,7 @@ void PrintMsgInfo(char *pSendBuf, int iBufLen)
 {
 	LPCOMM_PKG_HEADER pPkgHeader = (LPCOMM_PKG_HEADER)pSendBuf;
 	printf("[%s: %d]SendData()即将要发送测试数据给服务端：pPkgHeader->msgCode = %d, pPkgHeader->pkgLen = %d\n",
-												__FILE__, __LINE__, ntohs(pPkgHeader->msgCode), ntohs(pPkgHeader->pkgLen));
+												__FILE__, __LINE__, ntohs(pPkgHeader->usMsgCode), ntohs(pPkgHeader->usPkgLen));
 }
 	
 int SendData(char *pSendBuf, int iBufLen)

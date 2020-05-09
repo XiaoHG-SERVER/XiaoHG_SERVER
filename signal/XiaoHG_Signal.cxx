@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <string.h>
@@ -58,7 +58,7 @@ SIGNAL_T signals[] = {
 int InitSignals()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "InitSignals track");
+    CLog::Log(LOG_LEVEL_TRACK, "InitSignals track");
 
     SIGNAL_T *pstSig = NULL;
     struct sigaction stSa;  /* sigaction：A system-defined structure related to signals */
@@ -84,16 +84,16 @@ int InitSignals()
         /* set signal heandler*/
         if (sigaction(pstSig->iSigNo, &stSa, NULL) == -1)    
         {
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "sigaction(%s) failed", pstSig->pSigName);
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "sigaction(%s) failed", pstSig->pSigName);
             return XiaoHG_ERROR;
         }
         else
         {
             /* successful wirte some log */
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "sigaction(%s) successful", pstSig->pSigName);
+            CLog::Log(LOG_LEVEL_TRACK, "sigaction(%s) successful -- CLog::Log", pstSig->pSigName);
         }
     } /* end for */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "Init signals is successful");
+    CLog::Log("Init signals successful");
     return XiaoHG_SUCCESS;
 }
 
@@ -107,7 +107,7 @@ int InitSignals()
 static void SignalHandler(int iSigNo, siginfo_t *pSigInfo, void *pContext)
 {    
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "SignalHandler track");
+    CLog::Log(LOG_LEVEL_TRACK, "SignalHandler track");
 
     SIGNAL_T *pstSig = NULL;
     /* find the register signal */
@@ -123,7 +123,7 @@ static void SignalHandler(int iSigNo, siginfo_t *pSigInfo, void *pContext)
     /* master process or worker process */
     if(g_iProcessID == MASTER_PROCESS)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "master process receive signal: %d", iSigNo);
+        CLog::Log(LOG_LEVEL_INFO, "master process receive signal: %d", iSigNo);
         /* master */
         switch (iSigNo)
         {
@@ -138,7 +138,7 @@ static void SignalHandler(int iSigNo, siginfo_t *pSigInfo, void *pContext)
     /* worker */
     else if(g_iProcessID == WORKER_PROCESS)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "worker process receive signal: %d", iSigNo);
+        CLog::Log(LOG_LEVEL_INFO, "worker process receive signal: %d", iSigNo);
         /* worker */
         /* for the future */
         switch (iSigNo)
@@ -152,17 +152,17 @@ static void SignalHandler(int iSigNo, siginfo_t *pSigInfo, void *pContext)
     }
     else
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "Not a mater process or a worker process receive signal: %d", iSigNo);
+        CLog::Log(LOG_LEVEL_INFO, "Not a mater process or a worker process receive signal: %d", iSigNo);
     } /* end if(g_iProcessID == MASTER_PROCESS) */
 
     /* this is record some informetion */
     if(pSigInfo && pSigInfo->si_pid)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "receive signal: %d", iSigNo);
+        CLog::Log(LOG_LEVEL_INFO, "receive signal: %d", iSigNo);
     }
     else
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "receive signal: %d", iSigNo);
+        CLog::Log(LOG_LEVEL_INFO, "receive signal: %d", iSigNo);
     }
 
     if (iSigNo == SIGCHLD) 
@@ -186,12 +186,13 @@ static void SignalHandler(int iSigNo, siginfo_t *pSigInfo, void *pContext)
 static void ProcessGetStatus(void)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "ProcessGetStatus track");
+    CLog::Log(LOG_LEVEL_TRACK, "ProcessGetStatus track");
 
     int iOne = 0;        /* only iOne time to signal handle */
     int iStatus = 0;
     pid_t pid = 0;
     int iErr = 0;
+
     /* Parent process receive SIGCHLD signal when kill Child process */
     for ( ;; ) 
     {
@@ -219,10 +220,10 @@ static void ProcessGetStatus(void)
             /* no Child process */
             if (iErr == ECHILD)
             {
-                XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, 0, "waitpid failed");
+                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "waitpid failed");
                 return;
             }
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, 0, "waitpid failed");
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "waitpid failed");
             return;
         }  /* end if(pid == -1) */
         iOne = 1;    /* 标记waitpid()返回了正常的返回值 */
@@ -231,12 +232,12 @@ static void ProcessGetStatus(void)
         if(WTERMSIG(iStatus))
         {
             /* Get child process exit signal code */
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, 0, "exited on signal %d", WTERMSIG(iStatus));
+            CLog::Log(LOG_LEVEL_NOTICE, "exited on signal %d", WTERMSIG(iStatus));
         }
         else
         {
             /* WEXITSTATUS() */
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, 0, "exited on signal %d", WEXITSTATUS(iStatus));
+            CLog::Log(LOG_LEVEL_NOTICE, "exited on signal %d", WEXITSTATUS(iStatus));
         }
     } /* end for */
 

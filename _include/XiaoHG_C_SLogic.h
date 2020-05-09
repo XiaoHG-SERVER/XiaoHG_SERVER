@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #ifndef __XiaoHG_C_SLOGIC_H__
@@ -26,16 +26,16 @@ public:
 
 	/* Business logic */
 	bool HandleRegister(LPCONNECTION_T pConn, LPMSG_HEADER_T pMsgHeader, char *pPkgBody, unsigned short iBodyLength);
-	bool HandleLogIn(LPCONNECTION_T pConn, LPMSG_HEADER_T pMsgHeader, char *pPkgBody, unsigned short iBodyLength);
+	bool HandleLogin(LPCONNECTION_T pConn, LPMSG_HEADER_T pMsgHeader, char *pPkgBody, unsigned short iBodyLength);
 	bool HandleHeartbeat(LPCONNECTION_T pConn, LPMSG_HEADER_T pMsgHeader, char *pPkgBody, unsigned short iBodyLength);
 
 	/* When the heartbeat packet detection time is up, detect whether the heartbeat packet times out */
-	virtual void HeartBeatTimeOutCheckProc(LPMSG_HEADER_T tmpmsg, time_t cur_time);
+	virtual void HeartBeatTimeOutCheck(LPMSG_HEADER_T tmpmsg, time_t cur_time);
 
 public:
 	/* To process the received data packet, this function is called by the thread pool, 
 	 * this function is a separate thread */
-	virtual void ThreadRecvMsgHandleProc(char *pMsgBuf);
+	virtual void RecvMsgHandleThreadProc(char *pMsgBuf);
 };
 
 #endif //!__XiaoHG_C_SLOGIC_H__

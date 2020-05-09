@@ -1,6 +1,6 @@
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdlib.h>
@@ -14,8 +14,13 @@
 #include "XiaoHG_Func.h"
 #include "XiaoHG_C_Memory.h"
 #include "XiaoHG_C_Crc32.h"
+#include "XiaoHG_C_Log.h"
+#include "XiaoHG_C_Conf.h"
 
 #define __THIS_FILE__ "XiaoHG_Init.cxx"
+
+/* XiaoHG server process exit error code */
+int iExitCode;
 
 /* set process title */
 size_t g_uiArgvNeedMem;          /* argv need memory size */
@@ -50,10 +55,7 @@ sig_atomic_t g_stReap;
  * =================================================================*/
 void XiaoHG_Init(int argc, char *argv[])
 {
-    /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "XiaoHG_Init track");
-
-    int iExitCode = 0;                  /* exit code */
+    iExitCode = 0;                      /* exit code */
     g_stLog.iLogFd = -1;                /* -1：defualt*/
     g_stLog.iLogLevel = LOG_LEVEL_ERR;  /* log level */
     g_iProcessID = MASTER_PROCESS;      /* this is master process */
@@ -78,6 +80,8 @@ void XiaoHG_Init(int argc, char *argv[])
     }/* end for */
 
     /* init object */
+    CConfig::GetInstance();
+    CLog::GetInstance();
     CMemory::GetInstance();
     CCRC32::GetInstance();
 }

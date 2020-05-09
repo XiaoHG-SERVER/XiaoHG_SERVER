@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
@@ -55,7 +55,7 @@ CSocket::CSocket()
 int CSocket::Initalize()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::Initalize track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::Initalize track");
 
     LoadConfig(); /* load config */
     /* open the listen iPort */
@@ -73,33 +73,33 @@ int CSocket::Initalize()
 int CSocket::InitializeSubProc()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::InitializeSubProc track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::InitializeSubProc track");
 
     /* Message queue mutex initialization */
     if(pthread_mutex_init(&m_SendMessageQueueMutex, NULL) != 0)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "pthread_mutex_init(m_SendMessageQueueMutex) failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_init(m_SendMessageQueueMutex) failed");
         return XiaoHG_ERROR;
     }
 
     /* Connection queue related mutex initialization */
     if(pthread_mutex_init(&m_ConnectionMutex, NULL) != 0)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "pthread_mutex_init(m_ConnectionMutex) failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_init(m_ConnectionMutex) failed");
         return XiaoHG_ERROR;
     }
 
     /* Initialization of the mutex related to the pConnection recovery queue */
     if(pthread_mutex_init(&m_RecyConnQueueMutex, NULL) != 0)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "pthread_mutex_init(m_RecyConnQueueMutex) failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_init(m_RecyConnQueueMutex) failed");
         return XiaoHG_ERROR;   
     }
 
     /* Initialization of the mutex related to the time processing queue */
     if(pthread_mutex_init(&m_TimeQueueMutex, NULL) != 0)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "pthread_mutex_init(m_TimeQueueMutex) failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_init(m_TimeQueueMutex) failed");
         return XiaoHG_ERROR; 
     }
    
@@ -107,25 +107,25 @@ int CSocket::InitializeSubProc()
      * for synchronization between processes / threads */
     if(sem_init(&m_SemEventSendQueue, 0, 0) == -1)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "sem_init(m_SemEventSendQueue) failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "sem_init(m_SemEventSendQueue) failed");
         return XiaoHG_ERROR; 
     }
 
     /* send msg thread */
     ThreadItem *pSendQueueThreadItem = new ThreadItem(this);  
     m_ThreadPoolVector.push_back(pSendQueueThreadItem);
-    if(pthread_create(&pSendQueueThreadItem->_Handle, NULL, SendMsgQueueThread, pSendQueueThreadItem) != 0)
+    if(pthread_create(&pSendQueueThreadItem->_Handle, NULL, SendMsgQueueThreadProc, pSendQueueThreadItem) != 0)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "pthread_create(ServerSendQueueThread) failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_create(SendMsgQueueThreadProc) failed");
         return XiaoHG_ERROR;
     }
 
     /* recy connect thread */
     ThreadItem *pRecyConnThreadItem = new ThreadItem(this);
     m_ThreadPoolVector.push_back(pRecyConnThreadItem);
-    if(pthread_create(&pRecyConnThreadItem->_Handle, NULL, ServerRecyConnectionThread, pRecyConnThreadItem) != 0)
+    if(pthread_create(&pRecyConnThreadItem->_Handle, NULL, ServerRecyConnectionThreadProc, pRecyConnThreadItem) != 0)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "pthread_create(ServerRecyConnectionThread) failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_create(ServerRecyConnectionThreadProc) failed");
         return XiaoHG_ERROR; 
     }
 
@@ -135,13 +135,14 @@ int CSocket::InitializeSubProc()
         /* test head beat thread */
         ThreadItem *pTimemonitor = new ThreadItem(this);
         m_ThreadPoolVector.push_back(pTimemonitor);
-        if(pthread_create(&pTimemonitor->_Handle, NULL, HeartBeatMonitorThread, pTimemonitor) != 0)
+        if(pthread_create(&pTimemonitor->_Handle, NULL, HeartBeatMonitorThreadProc, pTimemonitor) != 0)
         {
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "pthread_create(HeartBeatMonitorThread) failed");
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_create(HeartBeatMonitorThreadProc) failed");
             return XiaoHG_ERROR; 
         }
     }
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_NOTICE, 0, "Subprocess init successful");
+    
+    CLog::Log("Subprocess init successful");
     return XiaoHG_SUCCESS;
 }
 
@@ -168,12 +169,12 @@ CSocket::~CSocket()
 void CSocket::ShutdownSubProc()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::ShutdownSubProc track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::ShutdownSubProc track");
 
     /* make ServerSendQueueThread go on */
     if(sem_post(&m_SemEventSendQueue)==-1)  
     {
-        XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "release send message thread failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "release send message thread failed");
     }
 
     std::vector<ThreadItem*>::iterator iter;
@@ -215,7 +216,7 @@ void CSocket::ShutdownSubProc()
 void CSocket::ClearMsgSendQueue()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::ClearMsgSendQueue track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::ClearMsgSendQueue track");
 
 	char *pMemPoint = NULL;
 	CMemory *pMemory = CMemory::GetInstance();
@@ -238,43 +239,29 @@ void CSocket::ClearMsgSendQueue()
 void CSocket::LoadConfig()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::LoadConfig track");
-
-    /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::LoadConfig() track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::LoadConfig track");
 
     CConfig *pConfig = CConfig::GetInstance();
-
     /* The largest item connected of epoll*/
     m_EpollCreateConnectCount = pConfig->GetIntDefault("EpollCreateConnectCount", m_EpollCreateConnectCount);
-    
     /* Get listen numbers */
     m_ListenPortCount = pConfig->GetIntDefault("ListenPortCount", m_ListenPortCount);
-
     /* Get delayed recovery time */
     m_RecyConnectionWaitTime = pConfig->GetIntDefault("Sock_RecyConnectionWaitTime", m_RecyConnectionWaitTime);
-
     /* delete connect tick */
     m_IsHBTimeOutCheckEnable = pConfig->GetIntDefault("Sock_WaitTimeEnable", 0);
-    
     /* how long chick heat beat */
 	m_iWaitTime = pConfig->GetIntDefault("Sock_MaxWaitTime", m_iWaitTime);
-    
     /* It is not recommended to be less than 5 seconds because it does not need to be too frequent */
 	m_iWaitTime = m_iWaitTime > 5 ? m_iWaitTime : 5;
-    
     /* Time out, delete connect */
-    m_iIsTimeOutKick = pConfig->GetIntDefault("Sock_TimeOutKick", 0);                                   
-
+    m_iIsTimeOutKick = pConfig->GetIntDefault("Sock_TimeOutKick", 0);
     /* Flood chick */
     m_FloodAttackEnable = pConfig->GetIntDefault("Sock_FloodAttackKickEnable", 0);
-    
     /* Flood chick time is 100ms for a time */
 	m_FloodTimeInterval = pConfig->GetIntDefault("Sock_FloodTimeInterval", 100);
-
     /* How many times have you kicked this person */
 	m_FloodKickCount = pConfig->GetIntDefault("Sock_FloodKickCounter", 10);
-
     return;
 }
 
@@ -289,7 +276,7 @@ void CSocket::LoadConfig()
 int CSocket::OpenListeningSockets()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::OpenListeningSockets track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::OpenListeningSockets track");
 
     int iPort = 0;
     int iSockFd = 0;
@@ -307,14 +294,14 @@ int CSocket::OpenListeningSockets()
         iSockFd = socket(AF_INET, SOCK_STREAM, 0);
         if(iSockFd == -1)
         {
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "create listening socket failed: %d", i);
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "create listening socket failed: %d", i);
             return XiaoHG_ERROR;
         }
 
         /* set socket noblock */
         if(SetNonBlocking(iSockFd) == XiaoHG_ERROR)
         {                
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "set socket nonblock failed: %d", i);
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "set socket nonblock failed: %d", i);
             close(iSockFd);
             return XiaoHG_ERROR;
         }
@@ -327,15 +314,15 @@ int CSocket::OpenListeningSockets()
         /* bind */
         if(bind(iSockFd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == -1)
         {
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "bind socket failed: %d, socket id: %d", i, iSockFd);
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "bind socket failed: %d, socket id: %d", i, iSockFd);
             close(iSockFd);
             return XiaoHG_ERROR;
         }
         
         /* listening */
-        if(listen(iSockFd, XiaoHG_LISTEN_BACKLOG) == -1)
+        if(listen(iSockFd, XHG_LISTEN_SOCKETS) == -1)
         {
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "listening socket failed: %d, socket id: %d", i, iSockFd);
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "listening socket failed: %d, socket id: %d", i, iSockFd);
             close(iSockFd);
             return XiaoHG_ERROR;
         }
@@ -347,17 +334,16 @@ int CSocket::OpenListeningSockets()
         /* push the listening list */
         m_ListenSocketList.push_back(pListenSocketItem); 
         /* listening successful write the log file */
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "listening socket sccessful: %d, socket id: %d", i, iSockFd);
     } /* end for(int i = 0; i < m_ListenPortCount; i++)  */
     
     /* no listening iPort */
     if(m_ListenSocketList.size() <= 0)
     {
-        XiaoHG_Log(true, LOG_LEVEL_ERR, errno, "no listening iPort");
+        CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "No listening iPort");
         return XiaoHG_ERROR;
     }
 
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "Open listening sockets successful");
+    CLog::Log("Open listening sockets successful");
     return XiaoHG_SUCCESS;
 }
 
@@ -372,12 +358,12 @@ int CSocket::OpenListeningSockets()
 int CSocket::SetNonBlocking(int iSockFd) 
 {    
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::SetNonBlocking track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::SetNonBlocking track");
 
     int nb = 1; /* 0：clean, 1：set */
     if(ioctl(iSockFd, FIONBIO, &nb) == -1) 
     {
-         XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "Set nonblock socket id: %d failed", iSockFd);
+         CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "Set nonblock socket id: %d failed", iSockFd);
         return XiaoHG_ERROR;
     }
     return XiaoHG_SUCCESS;
@@ -394,7 +380,7 @@ int CSocket::SetNonBlocking(int iSockFd)
 void CSocket::SendMsg(char *pSendBuff) 
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::SendMsg track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::SendMsg track");
 
     CMemory *pMemory = CMemory::GetInstance();
     /* m_SendMessageQueueMutex lock */
@@ -418,7 +404,7 @@ void CSocket::SendMsg(char *pSendBuff)
      * and it is considered to be a malicious user and is directly cut*/
     if(pConn->iSendQueueCount > MAX_EACHCONN_SENDCOUNT)
     {
-        XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "Found that a user %d has a large backlog of packets to be sent", pConn->iSockFd); 
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "Found that a user %d has a large backlog of packets to be sent", pConn->iSockFd); 
         ++m_iDiscardSendPkgCount;
         pMemory->FreeMemory(pSendBuff);
         CloseConnectionToRecy(pConn);
@@ -433,7 +419,7 @@ void CSocket::SendMsg(char *pSendBuff)
      * Let the ServerSendQueueThread() process come down and work */
     if(sem_post(&m_SemEventSendQueue) == -1) 
     {
-        XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "sem_post(&m_SemEventSendQueue) failed"); 
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "sem_post(&m_SemEventSendQueue) failed"); 
     }
     return;
 }
@@ -449,7 +435,7 @@ void CSocket::SendMsg(char *pSendBuff)
 void CSocket::CloseConnectionToRecy(LPCONNECTION_T pConn)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::CloseConnectionToRecy track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::CloseConnectionToRecy track");
 
     if(m_IsHBTimeOutCheckEnable == 1)
     {
@@ -485,7 +471,7 @@ void CSocket::CloseConnectionToRecy(LPCONNECTION_T pConn)
 bool CSocket::TestFlood(LPCONNECTION_T pConn)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::TestFlood track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::TestFlood track");
 
     struct timeval sCurrTime;   /* Current time structure */
 	uint64_t iCurrTime;         /* Current time (ms) */
@@ -510,7 +496,7 @@ bool CSocket::TestFlood(LPCONNECTION_T pConn)
 	if(pConn->iFloodAttackCount >= m_FloodKickCount)
 	{
 		/* disconnection */
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_NOTICE, 0, "check out socket: %d is flood attack, disconnection", pConn->iSockFd);
+        CLog::Log(LOG_LEVEL_ALERT, "Check out socket: %d is flood attack, disconnection", pConn->iSockFd);
 		return true;
 	}
 	return false;
@@ -527,12 +513,12 @@ bool CSocket::TestFlood(LPCONNECTION_T pConn)
 int CSocket::EpollInit()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::EpollInit track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::EpollInit track");
 
     m_EpollHandle = epoll_create(m_EpollCreateConnectCount);
     if (m_EpollHandle == -1) 
     {
-        XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "create epoll failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "create epoll failed");
         return XiaoHG_ERROR; 
     }
     /* Init connect */
@@ -545,7 +531,7 @@ int CSocket::EpollInit()
         LPCONNECTION_T pConn = GetConnection((*pos)->iSockFd); 
         if (pConn == NULL)
         {
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "get free connection failed");
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "get free connection failed");
             return XiaoHG_ERROR;
         }
         /* The pConnection object is associated with the monitoring object, 
@@ -568,11 +554,12 @@ int CSocket::EpollInit()
                                 pConn                   /* pConnection pool obj */
                                 ) == -1) 
         {
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "listening socket add epoll event failed");
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "listening socket add epoll event failed");
             return XiaoHG_ERROR;
         }
     } /* end for  */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "Epoll Init successful");
+    
+    CLog::Log("Epoll Init successful");
     return XiaoHG_SUCCESS;
 }
 
@@ -587,7 +574,7 @@ int CSocket::EpollInit()
 int CSocket::EpollRegisterEvent(int iSockFd, uint32_t uiEventType, uint32_t uiFlag, int iAction, LPCONNECTION_T pConn)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::EpollRegisterEvent track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::EpollRegisterEvent track");
 
     struct epoll_event ev;    
     memset(&ev, 0, sizeof(ev));
@@ -624,7 +611,6 @@ int CSocket::EpollRegisterEvent(int iSockFd, uint32_t uiEventType, uint32_t uiFl
     else
     {
         /* Keep */
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_STDERR, errno, "Should not appear, This is a reserved place");
         return XiaoHG_SUCCESS;
     } 
     /* set the event memory point*/
@@ -634,7 +620,7 @@ int CSocket::EpollRegisterEvent(int iSockFd, uint32_t uiEventType, uint32_t uiFl
      * You can register iEpollEvents, modify iEpollEvents, and delete iEpollEvents */
     if(epoll_ctl(m_EpollHandle, uiEventType, iSockFd, &ev) == -1)
     {
-        XiaoHG_Log(LOG_FILE, LOG_LEVEL_NOTICE, errno, "epoll_ctl(%d, %ud, %ud, %d) failed", iSockFd, uiEventType, uiFlag, iAction);
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "epoll_ctl(%d, %ud, %ud, %d) failed", iSockFd, uiEventType, uiFlag, iAction);
         return XiaoHG_ERROR;
     }
     return XiaoHG_SUCCESS;
@@ -657,7 +643,7 @@ int CSocket::EpollRegisterEvent(int iSockFd, uint32_t uiEventType, uint32_t uiFl
 int CSocket::EpolWaitlProcessEvents(int iTimer) 
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::EpolWaitlProcessEvents track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::EpolWaitlProcessEvents track");
 
     /* Wait for the event, the event will return to m_Events, at most return EPOLL_MAX_EVENTS iEpollEvents [because I only provide these memories], 
      * if the interval between two calls to epoll_wait () is relatively long, it may accumulate Events, 
@@ -685,13 +671,13 @@ int CSocket::EpolWaitlProcessEvents(int iTimer)
         {
             /* Directly returned by the signal. It is generally considered that this is not a problem, 
              * but it is still printed in the log record, because it is generally not artificially sent to the worker process. */
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_NOTICE, errno, "epoll wait failed");
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "epoll wait failed");
             return XiaoHG_SUCCESS;  /* Normal return */
         }
         else
         {
             /* error */
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "epoll wait failed");
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "epoll wait failed");
             return XiaoHG_ERROR;  /* error return */
         }
     }
@@ -706,7 +692,7 @@ int CSocket::EpolWaitlProcessEvents(int iTimer)
             return XiaoHG_SUCCESS;
         }
         /* Infinite wait [so there is no timeout], but no event is returned, this should be abnormal */
-        XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "epoll wait failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "epoll wait failed");
         return XiaoHG_ERROR; /* error return */
     }
 
@@ -758,14 +744,14 @@ int CSocket::EpolWaitlProcessEvents(int iTimer)
  * auth: XiaoHG
  * date: 2020.04.23
  * test time: 2020.04.23
- * function name: ServerSendQueueThread
+ * function name: SendMsgQueueThreadProc
  * discription: send message.
  * parameter:
  * =================================================================*/
-void* CSocket::SendMsgQueueThread(void *pThreadData)
+void* CSocket::SendMsgQueueThreadProc(void *pThreadData)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::SendMsgQueueThread track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::SendMsgQueueThreadProc track");
 
     ssize_t uiSendLen = 0;                  /* Record the size of the data that has been sent */
     char *pMsgBuff = NULL;                  /* point send message */
@@ -794,14 +780,14 @@ void* CSocket::SendMsgQueueThread(void *pThreadData)
              * signal and the corresponding signal processing function returns, the system call may return an EINTR error] */
             if(errno != EINTR) 
             {
-                XiaoHG_Log(LOG_ALL, LOG_LEVEL_NOTICE, errno, "sem_wait(pSocketObj->m_SemEventSendQueue) failed");
+                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "sem_wait(pSocketObj->m_SemEventSendQueue) failed");
             }
         }
         
         /* Require the entire process to exit */
         if(g_bIsStopEvent)
         {
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_NOTICE, 0, "g_bIsStopEvent is true exit");
+            CLog::Log(LOG_LEVEL_NOTICE, __THIS_FILE__, __LINE__, "g_bIsStopEvent is true exit");
             break;
         }
 
@@ -813,7 +799,7 @@ void* CSocket::SendMsgQueueThread(void *pThreadData)
             /* m_SendMessageQueueMutex lock */   
             if(pthread_mutex_lock(&pSocketObj->m_SendMessageQueueMutex) != 0)
             {
-                XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, 0, "m_SendMessageQueueMutex lock failed");
+                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "m_SendMessageQueueMutex lock failed");
                 return (void *)XiaoHG_ERROR;
             }
             pos = pSocketObj->m_MsgSendQueue.begin();
@@ -840,7 +826,6 @@ void* CSocket::SendMsgQueueThread(void *pThreadData)
                     ++pos;
                     pSocketObj->m_MsgSendQueue.erase(posTmp);
                     --pSocketObj->m_iSendMsgQueueCount;
-                    XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, 0, "ServerSendQueueThread pConn->uiCurrentSequence != pMsgHeader->uiCurrentSequence disconnection");
                     pMemory->FreeMemory(pMsgBuff);
                     continue; /* pNext message */
                 } /* end if */
@@ -909,7 +894,7 @@ void* CSocket::SendMsgQueueThread(void *pThreadData)
                                                             pConn               /* pConnection info */
                                                             ) == -1)
                         {
-                            XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "register epoll event failed");
+                            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "register epoll event failed");
                             return (void *)XiaoHG_ERROR;
                         }
                     } /* end if(uiSendLen > 0) */
@@ -941,7 +926,7 @@ void* CSocket::SendMsgQueueThread(void *pThreadData)
                                                         pConn               /* pConnection info */
                                                         ) == -1)
                     {
-                        XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "register epoll event failed");
+                        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "register epoll event failed");
                         return (void *)XiaoHG_ERROR;
                     }
                     continue; /* pNext message */ 
@@ -951,7 +936,7 @@ void* CSocket::SendMsgQueueThread(void *pThreadData)
                     /* If you can get here, it should be the return value of -2. 
                      * It is generally considered that the peer is disconnected, 
                      * waiting for recv() to disconnect the socket and recycle resources. */
-                    XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "Send failed sockfd: %d", pConn->iSockFd);
+                    CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "Send failed sockfd: %d", pConn->iSockFd);
                     pMemory->FreeMemory(pConn->pSendMsgMemPointer);
                     continue; /* pNext message */ 
                 }
@@ -959,7 +944,7 @@ void* CSocket::SendMsgQueueThread(void *pThreadData)
 
             if(pthread_mutex_unlock(&pSocketObj->m_SendMessageQueueMutex) != 0)
             {
-                XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, 0, "pthread_mutex_unlock(pSocketObj->m_SendMessageQueueMutex) failed");
+                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_unlock(pSocketObj->m_SendMessageQueueMutex) failed");
                 return (void *)XiaoHG_ERROR;
             }
         } /* if(pSocketObj->m_iSendMsgQueueCount > 0) */
@@ -979,13 +964,13 @@ void* CSocket::SendMsgQueueThread(void *pThreadData)
 void CSocket::CloseListeningSocket()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::CloseListeningSocket track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::CloseListeningSocket track");
 
     /* all listening sockets */
     for(int i = 0; i < m_ListenPortCount; i++) 
     {  
         close(m_ListenSocketList[i]->iSockFd);
-        XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, 0, "close %d iPort", m_ListenSocketList[i]->iPort);
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "close %d iPort", m_ListenSocketList[i]->iPort);
     }/* end for(int i = 0; i < m_ListenPortCount; i++) */
     return;
 }

@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #ifndef __XiaoHG_SOCKET_H__
@@ -18,11 +18,11 @@
 #include "XiaoHG_Comm.h"
 
 /* Connection queue completed */
-#define XiaoHG_LISTEN_BACKLOG 	511
+#define XHG_LISTEN_SOCKETS 511
 
 /* epoll_wait receives at most so many iEpollEvents at a time
  * This value cannot be greater than the iBuffLen when creating epoll_create() */
-#define EPOLL_MAX_EVENTS 	512
+#define EPOLL_MAX_EVENTS 512
 
 typedef struct listening_s		LISTENING_T, *LPLISTENING_T;
 typedef struct connection_s		CONNECTION_T, *LPCONNECTION_T;
@@ -60,7 +60,7 @@ struct connection_s
 	
 	/* receive message */
 	int iRecvCurrentStatus;					/* current receive message status */
-	char dataHeadInfo[INIT_MSGHEADER_DATA_BUFSIZE];		/* save receive message header */			
+	char dataHeadInfo[MSG_HEADER_LEN];		/* save receive message header */			
 	char *pRecvMsgBuff;						/* The header pointer of the buffer receiving the data, very useful for receiving incomplete packets */
 	int iRecvMsgLen;						/* How much data to receive is specified by this variable and used in conjunction with pRecvMsgBuff */
 	char *pRecvMsgMemPointer;				/* The first memory address for receiving packets from new will be used when releasing */
@@ -121,16 +121,16 @@ public:
 
 public:
 	/* Receive message process, implemented in subclasses */
-	virtual void ThreadRecvMsgHandleProc(char *pMsgBuf);
+	virtual void RecvMsgHandleThreadProc(char *pMsgBuf);
 
 	/* When the heartbeat packet detection time is up, it is time to detect whether 
 	 * the heartbeat packet has timed out. This function just releases the memory. 
 	 * Subclasses should reimplement this function to implement specific judgment actions */
-	virtual void HeartBeatTimeOutCheckProc(LPMSG_HEADER_T tmpmsg, time_t CurrentTime);  
+	virtual void HeartBeatTimeOutCheck(LPMSG_HEADER_T tmpmsg, time_t CurrentTime);  
 
 public:/* Epoll */
 	int EpollInit();						/* Epoll init */	
-	int EpolWaitlProcessEvents(int iTimer);	/* epoll等待接收和处理事件 */
+	int EpolWaitlProcessEvents(int iTimer);	/* epoll waits to receive and process events */
 	/* Register epoll event */
 	int EpollRegisterEvent(int iSockFd, uint32_t uiEventType, uint32_t uiFlag, int iAction, LPCONNECTION_T pConn); 
 	void EpollEventAcceptHandler(LPCONNECTION_T pOldConn);		/* Create a new connection event LogicHandlerCallBack */
@@ -180,10 +180,10 @@ private:
 	bool TestFlood(LPCONNECTION_T pConn);	
 	
 	/* Thread */
-	static void* SendMsgQueueThread(void *threadData);				/* A thread dedicated to sending data */
-	static void* ServerRecyConnectionThread(void *threadData);			/* Specially used to recycle connected threads */
+	static void* SendMsgQueueThreadProc(void *threadData);				/* A thread dedicated to sending data */
+	static void* ServerRecyConnectionThreadProc(void *threadData);			/* Specially used to recycle connected threads */
 	/* Time queue monitoring thread, processing threads kicked by users who do not send heartbeat packets when they expire */
-	static void* HeartBeatMonitorThread(void *threadData);		
+	static void* HeartBeatMonitorThreadProc(void *threadData);		
 	
 private:/* Recycle */
 	void CloseListeningSocket();						/* Close Listening socket */

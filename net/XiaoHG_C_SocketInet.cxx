@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
@@ -36,8 +36,11 @@
  * =================================================================*/
 size_t CSocket::ConnectionInfo(struct sockaddr *pSockAddr, int iPort, u_char *pText, size_t uiLen)
 {
+
+#ifdef __XiaoHG_LOG_TRACK__
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::ConnectionInfo track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::ConnectionInfo track");
+#endif//!__XiaoHG_LOG_TRACK__
 
     u_char *p = NULL;
     struct sockaddr_in *sin = NULL;
@@ -50,11 +53,11 @@ size_t CSocket::ConnectionInfo(struct sockaddr *pSockAddr, int iPort, u_char *pT
         if(iPort)  /* Port information is also combined into a string */
         {
             /* The new writable address is returned */
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_INFO, 0, "%ud.%ud.%ud.%ud:%d", p[0], p[1], p[2], p[3], ntohs(sin->sin_port));
+            CLog::Log(LOG_LEVEL_INFO, __THIS_FILE__, __LINE__, "%ud.%ud.%ud.%ud:%d", p[0], p[1], p[2], p[3], ntohs(sin->sin_port));
         }
         else /* No need to combine port information into a string */
         {
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_INFO, 0, "%ud.%ud.%ud.%ud", p[0], p[1], p[2], p[3]);  
+            CLog::Log(LOG_LEVEL_INFO, __THIS_FILE__, __LINE__, "%ud.%ud.%ud.%ud", p[0], p[1], p[2], p[3]);  
         }
         return (p - pText);
         break;

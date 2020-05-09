@@ -1,20 +1,20 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #ifndef __XiaoHG_MACRO_H__
 #define __XiaoHG_MACRO_H__
 
 #define __AUTHER__  "XiaoHG"
-#define __XiaoHG_VERSION__ "V1.1.1.20200503"
+#define __XiaoHG_VERSION__ "V1.1.1.20200509"
 
 #define XiaoHG_SUCCESS 0
 #define XiaoHG_ERROR   -1
 
 /* The maximum array length of the error message displayed */
-#define XiaoHG_MAX_ERROR_STR   2048
+#define MAX_ERRORSTR_LENGTH   2048
 
 #define XiaoHG_CPYMEM(dst, src, n) (((u_char *) memcpy(dst, src, n)) + (n)) 
 
@@ -55,8 +55,7 @@ enum{
 };
 
 /* about epoll event */
-enum
-{
+enum{
     EPOLL_ADD = 0,  /* add event */
     EPOLL_DEL,      /* delete event*/
     EPOLL_OVER      /* Coverage event */

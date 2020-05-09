@@ -1,7 +1,7 @@
 
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #ifndef __TEST_COMMON_H__
@@ -18,23 +18,22 @@ enum{
 
 typedef struct _COMM_PKG_HEADER
 {
-	unsigned short pkgLen;
-	unsigned short msgCode;
-	int crc32;
+	unsigned short usPkgLen;
+	unsigned short usMsgCode;
+	int iCrc32;
 }COMM_PKG_HEADER, *LPCOMM_PKG_HEADER;
 
 typedef struct _STRUCT_REGISTER
 {
 	int iType;
-	char username[56];
-	char password[40];
+	char UserName[56];
+	char Password[40];
 }STRUCT_REGISTER, *LPSTRUCT_REGISTER;
 
 typedef struct _STRUCT_LOGIN
 {
-	char username[56]; 
-	char password[40];
-
+	char UserName[56]; 
+	char Password[40];
 }STRUCT_LOGIN, *LPSTRUCT_LOGIN;
 
 #pragma pack()

@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
@@ -44,7 +44,7 @@ static const LogicHandlerCallBack StatusHandler[] =
  
     /* Start processing specific business logic */
     &CLogicSocket::HandleRegister,                         /* [5]: Realize the specific registration function */
-    &CLogicSocket::HandleLogIn,                            /* [6]: Realize the specific login function */
+    &CLogicSocket::HandleLogin,                            /* [6]: Realize the specific login function */
     /* ... */
 };
 
@@ -64,7 +64,7 @@ CLogicSocket::~CLogicSocket(){}
 int CLogicSocket::Initalize()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CLogicSocket::Initalize track");
+    CLog::Log(LOG_LEVEL_TRACK, "CLogicSocket::Initalize track");
 
     /* Call the parent class function of the same name */
     return CSocket::Initalize();
@@ -80,10 +80,10 @@ int CLogicSocket::Initalize()
  *              -> pMsgBuf: message header + packet header + packet body
  * parameter:
  * =================================================================*/
-void CLogicSocket::ThreadRecvMsgHandleProc(char *pMsgBuf)
+void CLogicSocket::RecvMsgHandleThreadProc(char *pMsgBuf)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CLogicSocket::ThreadRecvMsgHandleProc track");
+    CLog::Log(LOG_LEVEL_TRACK, "CLogicSocket::ThreadRecvMsgHandleProc track");
 
     void *pPkgBody = NULL;  /* packet point */
     LPMSG_HEADER_T pMsgHeader = (LPMSG_HEADER_T)pMsgBuf;    /* massage header */
@@ -96,7 +96,7 @@ void CLogicSocket::ThreadRecvMsgHandleProc(char *pMsgBuf)
         /* iCrc32 value if equeal 0, heart beat iCrc32 = 0, if not 0 is error packet header*/
 		if(pPkgHeader->iCrc32 != 0)
 		{
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, 0, "only packet header, and not a heartbeat packet");
+            CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "Only packet header, and not a heartbeat packet");
 			return; /* throw away */
 		}
     }
@@ -111,7 +111,7 @@ void CLogicSocket::ThreadRecvMsgHandleProc(char *pMsgBuf)
         /* crc validity check */
         if(iCalcCrc32 != pPkgHeader->iCrc32)
 		{
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, 0, "Crc validity check failed");
+            CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "Crc validity check failed");
 			return; /* throw away */
 		}   
 	}
@@ -135,7 +135,7 @@ void CLogicSocket::ThreadRecvMsgHandleProc(char *pMsgBuf)
 	if(sMsgCode >= TOTAL_COMMANDS)
     {
         /* Discard this package [malicious package or error package] */
-        XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, 0, "message code is error, message code = %d", sMsgCode);
+        CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "Message code is error, message code = %d", sMsgCode);
         return; 
     }
 
@@ -143,7 +143,7 @@ void CLogicSocket::ThreadRecvMsgHandleProc(char *pMsgBuf)
     /* This way of using sMsgCode can make finding member functions to be executed particularly efficient */
     if(StatusHandler[sMsgCode] == NULL) 
     {
-        XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, 0, "message code %d is not match handle function", sMsgCode);
+        CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "This is not a handle message process, message code = %d", sMsgCode);
         return;  /* throw away */
     }
 
@@ -157,16 +157,16 @@ void CLogicSocket::ThreadRecvMsgHandleProc(char *pMsgBuf)
  * auth: XiaoHG
  * date: 2020.04.23
  * test time: 2020.04.23
- * function name: HeartBeatTimeOutCheckProc
+ * function name: HeartBeatTimeOutCheck
  * discription: TWhen the heartbeat packet detection time is up, 
  *              it is necessary to detect whether the heartbeat packet has timed out. 
  *              This function is a subclass function to implement specific judgment actions.
  * parameter:
  * =================================================================*/
-void CLogicSocket::HeartBeatTimeOutCheckProc(LPMSG_HEADER_T pstMsgHeader, time_t CurrentTime)
+void CLogicSocket::HeartBeatTimeOutCheck(LPMSG_HEADER_T pstMsgHeader, time_t CurrentTime)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CLogicSocket::HeartBeatTimeOutCheckProc track");
+    CLog::Log(LOG_LEVEL_TRACK, "CLogicSocket::HeartBeatTimeOutCheck track");
 
     CMemory *pMemory = CMemory::GetInstance();
     /* check the connect is OK */
@@ -187,7 +187,7 @@ void CLogicSocket::HeartBeatTimeOutCheckProc(LPMSG_HEADER_T pstMsgHeader, time_t
          * the iLastHeartBeatTime will be refreshed every time the client heartbeat packet is received. */
         else if((CurrentTime - pConn->iLastHeartBeatTime) > (m_iWaitTime * 3 + 10))
         {
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_NOTICE, 0, "Heart beat check time out kick socket: %d", pConn->iSockFd);
+            CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "Heart beat check time out kick socket: %d", pConn->iSockFd);
             CloseConnectionToRecy(pConn);
         }
         pMemory->FreeMemory(pstMsgHeader);
@@ -204,12 +204,10 @@ void CLogicSocket::HeartBeatTimeOutCheckProc(LPMSG_HEADER_T pstMsgHeader, time_t
 void CLogicSocket::SendNoBodyPkgToClient(LPMSG_HEADER_T pMsgHeader,unsigned short iMsgCode)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CLogicSocket::SendNoBodyPkgToClient track");
+    CLog::Log(LOG_LEVEL_TRACK, "CLogicSocket::SendNoBodyPkgToClient track");
 
     CMemory *pMemory = CMemory::GetInstance();
     char *pSendBuff = (char *)pMemory->AllocMemory(m_iLenMsgHeader + m_iLenPkgHeader,false);
-
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, errno, "SendNoBodyPkgToClient enter");
 
     char *pTmpBuff = pSendBuff;
 	memcpy(pTmpBuff,pMsgHeader, m_iLenMsgHeader);
@@ -235,7 +233,7 @@ void CLogicSocket::SendNoBodyPkgToClient(LPMSG_HEADER_T pMsgHeader,unsigned shor
 bool CLogicSocket::HandleRegister(LPCONNECTION_T pConn, LPMSG_HEADER_T pMsgHeader, char *pPkgBody, unsigned short iBodyLength)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CLogicSocket::HandleRegister track");
+    CLog::Log(LOG_LEVEL_TRACK, "CLogicSocket::HandleRegister track");
 
     /* Check packet is OK */
     if(pPkgBody == NULL || sizeof(REGISTER_T) != iBodyLength)
@@ -253,8 +251,8 @@ bool CLogicSocket::HandleRegister(LPCONNECTION_T pConn, LPMSG_HEADER_T pMsgHeade
     pRecvMsgInfo->UserName[sizeof(pRecvMsgInfo->UserName) - 1] = 0; 
     pRecvMsgInfo->Password[sizeof(pRecvMsgInfo->Password) - 1] = 0;
 
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "HandleRegister receive message: pRecvMsgInfo->iType = %d, pRecvMsgInfo->UserName = %s, pRecvMsgInfo->Password = %s",
-                                                            pRecvMsgInfo->iType, pRecvMsgInfo->UserName, pRecvMsgInfo->Password);
+    CLog::Log("HandleRegister receive message: pRecvMsgInfo->iType = %d, pRecvMsgInfo->UserName = %s,pRecvMsgInfo->Password = %s", 
+                                                                pRecvMsgInfo->iType, pRecvMsgInfo->UserName, pRecvMsgInfo->Password);
 	
     /* Process the packet ... */
 
@@ -289,10 +287,10 @@ bool CLogicSocket::HandleRegister(LPCONNECTION_T pConn, LPMSG_HEADER_T pMsgHeade
     return true;
 }
 
-bool CLogicSocket::HandleLogIn(LPCONNECTION_T pConn,LPMSG_HEADER_T pMsgHeader,char *pPkgBody,unsigned short iBodyLength)
+bool CLogicSocket::HandleLogin(LPCONNECTION_T pConn,LPMSG_HEADER_T pMsgHeader,char *pPkgBody,unsigned short iBodyLength)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CLogicSocket::HandleLogIn track");
+    CLog::Log(LOG_LEVEL_TRACK, "CLogicSocket::HandleLogin track");
 
     if(pPkgBody == NULL || sizeof(LOGIN_T) != iBodyLength)
     {        
@@ -300,9 +298,12 @@ bool CLogicSocket::HandleLogIn(LPCONNECTION_T pConn,LPMSG_HEADER_T pMsgHeader,ch
     }
     CLock lock(&pConn->LogicPorcMutex);
 
-    LPLOGIN_T pRecvMsgInfo = (LPLOGIN_T)pPkgBody;     
+    LPLOGIN_T pRecvMsgInfo = (LPLOGIN_T)pPkgBody;
     pRecvMsgInfo->UserName[sizeof(pRecvMsgInfo->UserName) - 1] = 0;
     pRecvMsgInfo->Password[sizeof(pRecvMsgInfo->Password) - 1] = 0;
+
+    CLog::Log("HandleLogin receive message: pRecvMsgInfo->UserName = %s, pRecvMsgInfo->Password = %s",
+                                                        pRecvMsgInfo->UserName, pRecvMsgInfo->Password);
 
 	LPCOMM_PKG_HEADER pPkgHeader;
 	CMemory *pMemory = CMemory::GetInstance();
@@ -331,7 +332,7 @@ bool CLogicSocket::HandleLogIn(LPCONNECTION_T pConn,LPMSG_HEADER_T pMsgHeader,ch
 bool CLogicSocket::HandleHeartbeat(LPCONNECTION_T pConn, LPMSG_HEADER_T pMsgHeader, char *pPkgBody, unsigned short iBodyLength)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CLogicSocket::HandleHeartbeat track");
+    CLog::Log(LOG_LEVEL_TRACK, "CLogicSocket::HandleHeartbeat track");
 
     /* Heartbeat packet is not body */
     if(iBodyLength != 0)

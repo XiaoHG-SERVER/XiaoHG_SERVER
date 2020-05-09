@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
@@ -40,7 +40,7 @@
 void CSocket::AddToTimerQueue(LPCONNECTION_T pConn)
 {
 	/* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::AddToTimerQueue track");
+	CLog::Log(LOG_LEVEL_TRACK, "CSocket::AddToTimerQueue track");
 
     CMemory *pMemory = CMemory::GetInstance();
     time_t CurrTime = time(NULL);		/* Get Current time */
@@ -67,7 +67,7 @@ void CSocket::AddToTimerQueue(LPCONNECTION_T pConn)
 time_t CSocket::GetTimerQueueEarliestTime()
 {
 	/* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::GetTimerQueueEarliestTime track");
+	CLog::Log(LOG_LEVEL_TRACK, "CSocket::GetTimerQueueEarliestTime track");
 
     std::multimap<time_t, LPMSG_HEADER_T>::iterator pos;
 	pos = m_TimerQueueMultiMap.begin();		
@@ -87,7 +87,7 @@ time_t CSocket::GetTimerQueueEarliestTime()
 LPMSG_HEADER_T CSocket::RemoveTimerQueueFirstTime()
 {
 	/* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::RemoveTimerQueueFirstTime track");
+	CLog::Log(LOG_LEVEL_TRACK, "CSocket::RemoveTimerQueueFirstTime track");
 
 	LPMSG_HEADER_T pMsgHeader = NULL;
 	std::multimap<time_t, LPMSG_HEADER_T>::iterator pos;
@@ -119,7 +119,7 @@ LPMSG_HEADER_T CSocket::RemoveTimerQueueFirstTime()
 LPMSG_HEADER_T CSocket::GetOverTimeTimer(time_t CurrentTime)
 {
 	/* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::GetOverTimeTimer track");
+	CLog::Log(LOG_LEVEL_TRACK, "CSocket::GetOverTimeTimer track");
 
 	CMemory *pMemory = CMemory::GetInstance();
 	LPMSG_HEADER_T pOverTimeMsg = NULL;
@@ -171,7 +171,7 @@ LPMSG_HEADER_T CSocket::GetOverTimeTimer(time_t CurrentTime)
 void CSocket::DeleteFromTimerQueue(LPCONNECTION_T pConn)
 {
 	/* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::DeleteFromTimerQueue track");
+	CLog::Log(LOG_LEVEL_TRACK, "CSocket::DeleteFromTimerQueue track");
 
 	CMemory *pMemory = CMemory::GetInstance();
     CLock lock(&m_TimeQueueMutex);
@@ -209,7 +209,7 @@ lblMTQM:
 void CSocket::ClearAllFromTimerQueue()
 {
 	/* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::ClearAllFromTimerQueue track");
+	CLog::Log(LOG_LEVEL_TRACK, "CSocket::ClearAllFromTimerQueue track");
 
 	CMemory *pMemory = CMemory::GetInstance();	
 	std::multimap<time_t, LPMSG_HEADER_T>::iterator pos = m_TimerQueueMultiMap.begin();
@@ -227,16 +227,16 @@ void CSocket::ClearAllFromTimerQueue()
  * auth: XiaoHG
  * date: 2020.04.23
  * test time: 2020.04.23
- * function name: HeartBeatMonitorThread
+ * function name: HeartBeatMonitorThreadProc
  * discription: Time queue monitoring and processing threads, 
  * 				processing threads kicked by users who do not 
  * 				send heartbeat packets when they expire.
  * parameter:
  * =================================================================*/
-void* CSocket::HeartBeatMonitorThread(void* pThreadData)
+void* CSocket::HeartBeatMonitorThreadProc(void* pThreadData)
 {
 	/* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::HeartBeatMonitorThread track");
+	CLog::Log(LOG_LEVEL_TRACK, "CSocket::HeartBeatMonitorThreadProc track");
 
 	time_t CurrentTime = 0;
     ThreadItem *pThread = static_cast<ThreadItem*>(pThreadData);
@@ -257,7 +257,7 @@ void* CSocket::HeartBeatMonitorThread(void* pThreadData)
 				/* m_TimeQueueMutex lock */
 				if(pthread_mutex_lock(&pSocketObj->m_TimeQueueMutex) != 0)
 				{
-					XiaoHG_Log(LOG_FILE, LOG_LEVEL_INFO, 0, "pthread_mutex_lock(&pSocketObj->m_TimeQueueMutex) failed");
+					CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_lock(&pSocketObj->m_TimeQueueMutex) failed");
 					return (void *)XiaoHG_ERROR;
 				}
                 
@@ -266,13 +266,13 @@ void* CSocket::HeartBeatMonitorThread(void* pThreadData)
 				while ((pOverTimeMsg = pSocketObj->GetOverTimeTimer(CurrentTime)) != NULL) 
 				{
 					/* Each time out message to checkout */
-					pSocketObj->HeartBeatTimeOutCheckProc(pOverTimeMsg, CurrentTime);
+					pSocketObj->HeartBeatTimeOutCheck(pOverTimeMsg, CurrentTime);
 				}/* end while */
 
                 /* m_TimeQueueMutex unlock */ 
 				if(pthread_mutex_unlock(&pSocketObj->m_TimeQueueMutex) != 0)
 				{
-					XiaoHG_Log(LOG_FILE, LOG_LEVEL_INFO, 0, "pthread_mutex_unlock(&pSocketObj->m_TimeQueueMutex) failed");
+					CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_unlock(&pSocketObj->m_TimeQueueMutex) failed");
 					return (void *)XiaoHG_ERROR;
 				}
             }
@@ -285,17 +285,17 @@ void* CSocket::HeartBeatMonitorThread(void* pThreadData)
  * auth: XiaoHG
  * date: 2020.04.23
  * test time: 2020.04.23
- * function name: HeartBeatMonitorThread
+ * function name: HeartBeatTimeOutCheck
  * discription: When the heartbeat packet detection time is up, 
  * 				it is time to detect whether the heartbeat packet has timed out. 
  * 				This function just releases the memory. Subclasses should restart 
  * 				this function in advance to achieve specific judgment actions。
  * parameter:
  * =================================================================*/
-void CSocket::HeartBeatTimeOutCheckProc(LPMSG_HEADER_T pstMsgHeader, time_t CurrentTime)
+void CSocket::HeartBeatTimeOutCheck(LPMSG_HEADER_T pstMsgHeader, time_t CurrentTime)
 {
 	/* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::HeartBeatTimeOutCheckProc track");
+	CLog::Log(LOG_LEVEL_TRACK, "CSocket::HeartBeatTimeOutCheck track");
 
 	CMemory *pMemory = CMemory::GetInstance();
 	pMemory->FreeMemory(pstMsgHeader);

@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #ifndef __XiaoHG_MEMORY_H__
@@ -21,6 +21,7 @@ public:
 private:
 	static CMemory *m_Instance;
 
+/* Singleton implementation */
 public:	
 	static CMemory* GetInstance()
 	{
@@ -30,16 +31,16 @@ public:
 			if(m_Instance == NULL)
 			{
 				m_Instance = new CMemory(); 
-				static CGarhuishou cl; 
+				static CDeleteInstance cl; 
 			}
 			/* unlock */
 		}
 		return m_Instance;
 	}	
-	class CGarhuishou 
+	class CDeleteInstance 
 	{
 	public:				
-		~CGarhuishou()
+		~CDeleteInstance()
 		{
 			if (CMemory::m_Instance)
 			{
@@ -50,8 +51,8 @@ public:
 	};
 
 public:
-	void *AllocMemory(int memCount,bool ifmemset);
-	void FreeMemory(void *point);
+	void* AllocMemory(int iMemCount, bool bIsMemSet);
+	void FreeMemory(void *p);
 };
 
 #endif //!__XiaoHG_MEMORY_H__

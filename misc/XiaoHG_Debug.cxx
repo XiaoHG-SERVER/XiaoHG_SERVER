@@ -1,7 +1,7 @@
 
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include "XiaoHG_C_Socket.h"
@@ -9,6 +9,8 @@
 #include "XiaoHG_Macro.h"
 #include "XiaoHG_C_ThreadPool.h"
 #include "XiaoHG_Global.h"
+
+#define __THIS_FILE__ "XiaoHG_Debug.cxx"
 
 /* =================================================================
  * auth: XiaoHG
@@ -21,7 +23,7 @@
 void CSocket::PrintTDInfo()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::PrintTDInfo track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::PrintTDInfo track");
 
     time_t CurrTime = time(NULL);
     /* 10s iTimer */
@@ -32,19 +34,19 @@ void CSocket::PrintTDInfo()
         m_LastPrintTime = CurrTime;
         int tmpoLUC = m_OnLineUserCount;    /* Atomic transfer, print atomic type error directly */
         int tmpsmqc = m_iSendMsgQueueCount; /* Atomic transfer, print atomic type error directly */
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "------------------------------------begin--------------------------------------");
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "Current Online/Total(%d/%d)", tmpoLUC, m_EpollCreateConnectCount);
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "Connection free conn/Total/Release connection(%d/%d/%d)", 
+        CLog::Log(LOG_LEVEL_INFO, __THIS_FILE__, __LINE__, "------------------------------------begin--------------------------------------");
+        CLog::Log(LOG_LEVEL_INFO, __THIS_FILE__, __LINE__, "Current Online/Total(%d/%d)", tmpoLUC, m_EpollCreateConnectCount);
+        CLog::Log(LOG_LEVEL_INFO, __THIS_FILE__, __LINE__, "Connection free conn/Total/Release connection(%d/%d/%d)", 
                                                 m_FreeConnectionList.size(), m_ConnectionList.size(), m_RecyConnectionList.size());   
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "Time queue size(%d)", m_TimerQueueMultiMap.size());     
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "Current receive queue size/send queue size(%d/%d)，Drop packets: %d",
+        CLog::Log(LOG_LEVEL_INFO, __THIS_FILE__, __LINE__, "Time queue size(%d)", m_TimerQueueMultiMap.size());     
+        CLog::Log(LOG_LEVEL_INFO, __THIS_FILE__, __LINE__, "Current receive queue size/send queue size(%d/%d)，Drop packets: %d",
                                                 tmprmqc, tmpsmqc, m_iDiscardSendPkgCount);  
         if( tmprmqc > 100000)
         {
             /* The receiving queue is too large, report it, this should be alert, consider speed limit and other means */
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "The number of receive queues is too large(%d)，Need more！！！！！！", tmprmqc);  
+            CLog::Log(LOG_LEVEL_INFO, __THIS_FILE__, __LINE__, "The number of receive queues is too large(%d)，Need more！！！！！！", tmprmqc);  
         }
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "------------------------------------end--------------------------------------");
+        CLog::Log(LOG_LEVEL_INFO, __THIS_FILE__, __LINE__, "------------------------------------end--------------------------------------");
     }
     return;
 }

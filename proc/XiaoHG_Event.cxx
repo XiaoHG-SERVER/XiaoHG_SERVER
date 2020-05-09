@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
@@ -28,7 +28,7 @@
 void ProcessEventsAndTimers()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "ProcessEventsAndTimers track");
+    CLog::Log(LOG_LEVEL_TRACK, "ProcessEventsAndTimers track");
 
     /* -1: always waiting */
     g_LogicSocket.EpolWaitlProcessEvents(-1);

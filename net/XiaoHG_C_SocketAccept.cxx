@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
@@ -35,7 +35,7 @@
 void CSocket::EpollEventAcceptHandler(LPCONNECTION_T pOldConn)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CSocket::EpollEventAcceptHandler track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::EpollEventAcceptHandler track");
 
     int iErr = 0;   /* errno */
     int iSockFd = 0;    /* socket id */
@@ -64,7 +64,7 @@ void CSocket::EpollEventAcceptHandler(LPCONNECTION_T pOldConn)
              * or EWOULDBLOCK (meaning "expect to block") when the event has not occurred. */
             if(iErr == EAGAIN)
             {
-                XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "accept new connection failed");
+                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "accept new connection failed");
             }
 
             /* ECONNRESET error occurs after the other party accidentally closes the socket 
@@ -74,7 +74,7 @@ void CSocket::EpollEventAcceptHandler(LPCONNECTION_T pOldConn)
             else if (iErr == ECONNABORTED)
             {
                 /* this errno discription: “software caused connection abort” */
-                XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "accept new connection failed");
+                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "accept new connection failed");
             }
 
             /* EMFILE: The iSockFd of the process has been exhausted [the total number of files / sockets 
@@ -86,19 +86,18 @@ void CSocket::EpollEventAcceptHandler(LPCONNECTION_T pOldConn)
              * resource limits must be limited to system-wide resource limits.*/
             else if (iErr == EMFILE || iErr == ENFILE) 
             {
-                XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "accept new connection failed");
+                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "accept new connection failed");
             }
 
             /* accept4() if no surpose */
             else if(iIsAccept4 && iErr == ENOSYS) 
             {
-                XiaoHG_Log(LOG_FILE, LOG_LEVEL_NOTICE, errno, "accept new connection failed");
                 iIsAccept4 = false;     /* use accept() function*/
                 continue;               /* back */
             }
             else
             {
-                XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "accept new connection failed, We didn't check this error");
+                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "accept new connection failed, We didn't check this error");
             }
 
             return;
@@ -107,7 +106,7 @@ void CSocket::EpollEventAcceptHandler(LPCONNECTION_T pOldConn)
         /* too meny connection, reject new connect */
         if(m_OnLineUserCount >= m_EpollCreateConnectCount)
         {
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "the maximum number of incoming users allowed by the system, close the incoming request");
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "the maximum number of incoming users allowed by the system, close the incoming request");
             close(iSockFd);
             return;
         }
@@ -124,7 +123,7 @@ void CSocket::EpollEventAcceptHandler(LPCONNECTION_T pOldConn)
                  * and it is disconnected after sending a packet. We cannot let this happen continuously,
                  *  so we must disconnect new users. Connection until m_FreeConnectionList becomes large enough 
                  * [more than enough connections in the connection pool are recycled] */
-                XiaoHG_Log(LOG_FILE, LOG_LEVEL_ALERT, errno, "accept new connection is unusual");
+                CLog::Log(LOG_LEVEL_ALERT, "Accept new connection is unusual");
                 close(iSockFd);
                 return;
             }
@@ -137,9 +136,9 @@ void CSocket::EpollEventAcceptHandler(LPCONNECTION_T pOldConn)
             /* no more free connection */
             if(close(iSockFd) == -1)
             {
-                XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "close socket: %d failed", iSockFd);
+                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "close socket: %d failed", iSockFd);
             }
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "Socket: %d get a new connection failed", iSockFd);
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "Socket: %d get a new connection failed", iSockFd);
             return;
         }
 
@@ -155,7 +154,7 @@ void CSocket::EpollEventAcceptHandler(LPCONNECTION_T pOldConn)
             {
                 /* set nonblock failed */
                 CloseConnectionImmediately(pNewConn);
-                XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "set socket: %d nonblock failed", iSockFd);
+                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "set socket: %d nonblock failed", iSockFd);
                 return;
             }
         }
@@ -179,7 +178,7 @@ void CSocket::EpollEventAcceptHandler(LPCONNECTION_T pOldConn)
                                 ) == -1)
         {
             CloseConnectionImmediately(pNewConn);
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "Add event epoll failed, socket id: %d", iSockFd);
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "Add event epoll failed, socket id: %d", iSockFd);
             return;
         }
 

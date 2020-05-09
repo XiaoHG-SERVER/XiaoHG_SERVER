@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
@@ -14,10 +14,16 @@
 
 #define __THIS_FILE__ "XiaoHG_C_Conf.cxx"
 
+#define CONFIG_FILE_PATH "XiaoHG_SERVER.conf"
+
 CConfig *CConfig::m_Instance = NULL;
-CConfig::CConfig(){}
+
+CConfig::CConfig()
+{
+    LoadConfigFileToList();
+}
 CConfig::~CConfig()
-{    
+{
 	std::vector<LPCONF_ITEM>::iterator pos;	
 	for(pos = m_ConfigItemList.begin(); pos != m_ConfigItemList.end(); ++pos)
 	{
@@ -34,17 +40,13 @@ CConfig::~CConfig()
  * function name: Load
  * discription: load log file.
  * =================================================================*/
-int CConfig::Load(const char *pConfName)
+int CConfig::LoadConfigFileToList()
 {
-    /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CConfig::Load track");
-    
     /* max item 500b */
     char LineBuf[501] = { 0 };
-    FILE *fp = fopen(pConfName, "r");
+    FILE *fp = fopen(CONFIG_FILE_PATH, "r");
     if(fp == NULL)
     {
-        XiaoHG_Log(LOG_STD, LOG_LEVEL_ERR, errno, "fopen failed, \"%s\"", pConfName);
         return XiaoHG_ERROR;
     }
     
@@ -95,7 +97,6 @@ int CConfig::Load(const char *pConfName)
 
         } /* end if */
     } /* end while(!feof(fp)) */ 
-    XiaoHG_Log(LOG_STD, LOG_LEVEL_INFO, 0, "Load config file is successful");
     fclose(fp);
     return XiaoHG_SUCCESS;
 }
@@ -107,15 +108,12 @@ int CConfig::Load(const char *pConfName)
  * function name: GetString
  * discription: get config from item name
  * =================================================================*/
-const char* CConfig::GetString(const char *p_itemname)
+const char* CConfig::GetString(const char *pItemName)
 {
-    /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CConfig::GetString track");
-
 	std::vector<LPCONF_ITEM>::iterator pos;	
 	for(pos = m_ConfigItemList.begin(); pos != m_ConfigItemList.end(); ++pos)
-	{	
-		if(strcasecmp( (*pos)->ItemName,p_itemname) == 0)
+	{
+		if(strcasecmp( (*pos)->ItemName, pItemName) == 0)
 			return (*pos)->ItemContent;
 	}/* end for */
 	return NULL;
@@ -129,16 +127,15 @@ const char* CConfig::GetString(const char *p_itemname)
  * discription: get config from item name, default def if the config
  *              item is null.
  * =================================================================*/
-int CConfig::GetIntDefault(const char *p_itemname, const int def)
+int CConfig::GetIntDefault(const char *pItemName, const int def)
 {
-    /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CConfig::GetIntDefault track");
-
 	std::vector<LPCONF_ITEM>::iterator pos;	
 	for(pos = m_ConfigItemList.begin(); pos != m_ConfigItemList.end(); ++pos)
-	{	
-		if(strcasecmp( (*pos)->ItemName,p_itemname) == 0)
-			return atoi((*pos)->ItemContent);
+	{
+		if(strcasecmp( (*pos)->ItemName, pItemName) == 0)
+        {
+            return atoi((*pos)->ItemContent);
+        }
 	}/* end for */
 	return def;
 }

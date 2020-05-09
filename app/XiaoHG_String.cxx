@@ -1,14 +1,14 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
 #include <string.h>
-#include "XiaoHG_Log.h"
 #include "XiaoHG_Macro.h"
 #include "XiaoHG_Func.h"
+#include "XiaoHG_Global.h"
 
 #define __THIS_FILE__ "XiaoHG_String.cxx"
 
@@ -20,10 +20,7 @@
  * discription: Truncate spaces at the end of the string
  * =================================================================*/
 void Rtrim(char *string)   
-{   
-	/* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "Rtrim track");
-
+{
 	size_t len = 0;   
 	if(string == NULL)   
 		return;
@@ -43,15 +40,12 @@ void Rtrim(char *string)
  * =================================================================*/
 void Ltrim(char *string)
 {
-	/* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "Ltrim track");
-
 	size_t len = 0;
 	len = strlen(string);   
 	char *p_tmp = string;
 	if( (*p_tmp) != ' ')
 		return;
-	//找第一个不为空格的
+		
 	while((*p_tmp) != '\0')
 	{
 		if( (*p_tmp) == ' ')

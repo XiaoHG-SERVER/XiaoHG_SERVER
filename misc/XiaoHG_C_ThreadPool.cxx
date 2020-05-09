@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdarg.h>
@@ -21,10 +21,7 @@ pthread_cond_t CThreadPool::m_pThreadCond = PTHREAD_COND_INITIALIZER;
 bool CThreadPool::m_Shutdown = false;      
 
 CThreadPool::CThreadPool()
-{  
-    /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CThreadPool::CThreadPool track");
-
+{
     m_iRunningThreadCount = 0;
     m_LastAlartNotEnoughThreadTime = 0;
     m_iRecvMsgQueueCount = 0;
@@ -46,7 +43,7 @@ CThreadPool::~CThreadPool()
 void CThreadPool::ClearMsgRecvQueue()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CThreadPool::ClearMsgRecvQueue track");
+    CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::ClearMsgRecvQueue track");
 
 	char *pTmpMempoint = NULL;
 	CMemory *pMemory = CMemory::GetInstance();
@@ -69,7 +66,7 @@ void CThreadPool::ClearMsgRecvQueue()
 int CThreadPool::Create(int iThreadCount)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CThreadPool::Create track");
+    CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::Create track");
 
     ThreadItem *pNewThreadItem = NULL;
     /* create thread numbers */
@@ -79,7 +76,7 @@ int CThreadPool::Create(int iThreadCount)
         m_ThreadPoolVector.push_back(pNewThreadItem);
         if(pthread_create(&pNewThreadItem->_Handle, NULL, ThreadFunc, pNewThreadItem) != 0)
         {
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_ALERT, errno, "Create thread failed");
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "Create thread failed");
             return XiaoHG_ERROR;
         }
     } /* end for */
@@ -96,7 +93,7 @@ int CThreadPool::Create(int iThreadCount)
         }
     }
 
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "Create thread success");
+    CLog::Log("Create thread success");
     return XiaoHG_SUCCESS;
 }
 
@@ -111,7 +108,7 @@ int CThreadPool::Create(int iThreadCount)
 void* CThreadPool::ThreadFunc(void *pThreadData)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CThreadPool::ThreadFunc track");
+    CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::ThreadFunc track");
 
     CMemory *pMemory = CMemory::GetInstance();
     /* This is a static member function, there is no this pointer */
@@ -123,7 +120,7 @@ void* CThreadPool::ThreadFunc(void *pThreadData)
         /* m_pThreadMutex lock */
         if(pthread_mutex_lock(&m_pThreadMutex) != 0)
         {
-            XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "pthread_mutex_lock(&m_pThreadMutex) failed");
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_lock(&m_pThreadMutex) failed");
             /* break; */
         }
         /* The following line of program writing skills are very important. 
@@ -160,10 +157,10 @@ void* CThreadPool::ThreadFunc(void *pThreadData)
         if(m_Shutdown)
         {
             /* thread exit */
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_NOTICE, 0, "m_Shutdown = true thread exit");
+            CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "m_Shutdown = true thread exit");
             if(pthread_mutex_unlock(&m_pThreadMutex) != 0)
             {
-                XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "pthread_mutex_unlock(&m_pThreadMutex) failed");
+                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_unlock(&m_pThreadMutex) failed");
                 /* break; */
             }
             break;
@@ -179,13 +176,13 @@ void* CThreadPool::ThreadFunc(void *pThreadData)
         /* m_pThreadMutex unlock */
         if(pthread_mutex_unlock(&m_pThreadMutex) != 0)
         {
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "pthread_mutex_unlock(&m_pThreadMutex) failed");
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_unlock(&m_pThreadMutex) failed");
             /* break; */
         }
 
         /* handle massage */
         ++pThreadPoolObj->m_iRunningThreadCount;
-        g_LogicSocket.ThreadRecvMsgHandleProc(pJobBuf);
+        g_LogicSocket.RecvMsgHandleThreadProc(pJobBuf);
         pMemory->FreeMemory(pJobBuf);   /* handle over, free memory */ 
         --pThreadPoolObj->m_iRunningThreadCount;
 
@@ -206,12 +203,12 @@ void* CThreadPool::ThreadFunc(void *pThreadData)
 void CThreadPool::PutMsgRecvQueueAndSignal(char *pRecvMsgBuff)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CThreadPool::PutMsgRecvQueueAndSignal track");
+    CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::PutMsgRecvQueueAndSignal track");
 
     /* m_pThreadMutex lock */
     if(pthread_mutex_lock(&m_pThreadMutex) != 0)
     {
-        XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "pthread_mutex_lock(&m_pThreadMutex) failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_lock(&m_pThreadMutex) failed");
         return;
     }
     /* Join the message queue */
@@ -220,7 +217,7 @@ void CThreadPool::PutMsgRecvQueueAndSignal(char *pRecvMsgBuff)
     /* m_pThreadMutex unlock */
     if(pthread_mutex_unlock(&m_pThreadMutex) != 0)
     {
-        XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "pthread_mutex_unlock(&m_pThreadMutex) failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_unlock(&m_pThreadMutex) failed");
         return;
     }
     /* Can excite the thread to work */
@@ -239,13 +236,13 @@ void CThreadPool::PutMsgRecvQueueAndSignal(char *pRecvMsgBuff)
 void CThreadPool::CallRecvMsgHandleThread()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CThreadPool::CallRecvMsgHandleThread track");
+    CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::CallRecvMsgHandleThread track");
 
     /* Wake up a thread waiting for the condition, that is, 
      * a thread that can be stuck in pthread_cond_wait() */
     if(pthread_cond_signal(&m_pThreadCond) != 0)
     {
-        XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "pthread_cond_signal(&m_pThreadCond) failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_cond_signal(&m_pThreadCond) failed");
         return;
     }
     
@@ -260,7 +257,7 @@ void CThreadPool::CallRecvMsgHandleThread()
         if(CurrTime - m_LastAlartNotEnoughThreadTime > 10)
         {
             m_LastAlartNotEnoughThreadTime = CurrTime;  /* flash current time */
-            XiaoHG_Log(LOG_FILE, LOG_LEVEL_ALERT, 0, "Not enough threads");
+            CLog::Log(LOG_LEVEL_ALERT, __THIS_FILE__, __LINE__, "Not enough threads");
         }
     } /* end if */
 
@@ -278,7 +275,7 @@ void CThreadPool::CallRecvMsgHandleThread()
 int CThreadPool::StopAll()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "CThreadPool::StopAll track");
+    CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::StopAll track");
 
     /* Ensure that the function will not be called repeatedly */
     if(m_Shutdown == true)
@@ -288,10 +285,9 @@ int CThreadPool::StopAll()
     m_Shutdown = true;
 
     /* weakup all threads in pthread_cond_wait function */
-    int iErr = pthread_cond_broadcast(&m_pThreadCond); 
-    if(iErr != 0)
+    if(pthread_cond_broadcast(&m_pThreadCond) != 0)
     {
-        XiaoHG_Log(LOG_FILE, LOG_LEVEL_ERR, errno, "weakup all thread failed");
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__ , "pthread_cond_broadcast(&m_pThreadCond) failed");
         return XiaoHG_ERROR;
     }
 
@@ -317,6 +313,6 @@ int CThreadPool::StopAll()
 	m_ThreadPoolVector.clear();
 
     /* this is record some message to help us know more current status */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "All thread pool return successful");
+    CLog::Log(LOG_LEVEL_NOTICE, "All thread pool return successful");
     return XiaoHG_SUCCESS;
 }

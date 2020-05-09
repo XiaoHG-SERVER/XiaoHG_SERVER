@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #ifndef __XiaoHG_COMM_H__
@@ -23,7 +23,7 @@
 /* Because I want to receive the packet header first, I want to define a fixed-size array specifically for receiving the packet header. 
  * The size of this number must be> sizeof (COMM_PKG_HEADER), so I define it as 20 here is more than enough. 
  * If the size of COMM_PKG_HEADER changes in the future, this number must also be Adjust to meet the requirements of> sizeof (COMM_PKG_HEADER) */
-#define INIT_MSGHEADER_DATA_BUFSIZE 20
+#define MSG_HEADER_LEN 20
 
 /* Alignment, 1 byte alignment [Members of the structure
  * do not do any byte alignment: arranged closely together] */

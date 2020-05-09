@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #ifndef __XiaoHG_C_CRC32_H__
@@ -18,6 +18,7 @@ public:
 private:
 	static CCRC32 *m_Instance;
 
+/* Singleton implementation */
 public:	
 	static CCRC32* GetInstance() 
 	{
@@ -27,16 +28,16 @@ public:
 			if(m_Instance == NULL)
 			{				
 				m_Instance = new CCRC32();
-				static CGarhuishou cl; 
+				static CDeleteInstance cl; 
 			}
 			/* unlock */
 		}
 		return m_Instance;
 	}	
-	class CGarhuishou 
+	class CDeleteInstance 
 	{
 	public:				
-		~CGarhuishou()
+		~CDeleteInstance()
 		{
 			if (CCRC32::m_Instance)
 			{						
@@ -48,16 +49,12 @@ public:
 	
 public:
 
-	void Init_CRC32_Table();
-	/* unsigned long Reflect(unsigned long ref, char ch) */	/*  Reflects CRC bits in the lookup table */
-    unsigned int Reflect(unsigned int ref, char ch);		/*  Reflects CRC bits in the lookup table */
-    
-	/* int Get_CRC(unsigned char* buffer, unsigned long dwSize) */
-    int Get_CRC(unsigned char* buffer, unsigned int dwSize);
+	void InitCRC32Table();
+    unsigned int Reflect(unsigned int uiRef, char ch);
+    int Get_CRC(unsigned char* ucBuffer, unsigned int uiDWSize);
     
 public:
-	/* unsigned long crc32_table[256] */	/*  Lookup table arrays */
-    unsigned int crc32_table[256];			/*  Lookup table arrays */
+    unsigned int CRC32Table[256];
 };
 
 #endif //!__XiaoHG_C_CRC32_H__

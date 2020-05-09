@@ -1,7 +1,7 @@
 ﻿
 /*
- * Copyright (C/C++) XiaoHG
- * Copyright (C/C++) XiaoHG_SERVER
+ * Copyright(c) XiaoHG
+ * Copyright(c) XiaoHG_SERVER
  */
 
 #include <stdio.h>
@@ -36,7 +36,7 @@ static void WorkerProcessInit(int iWorkProcNo);
 void MasterProcessCycle()
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "MasterProcessCycle track");
+    CLog::Log(LOG_LEVEL_TRACK, "MasterProcessCycle track");
 
     sigset_t stSet;        /* signal stSet */
     sigemptyset(&stSet);   /* clrean signals */
@@ -61,7 +61,7 @@ void MasterProcessCycle()
     /* Shield signal */
     if(sigprocmask(SIG_BLOCK, &stSet, NULL) == -1)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_NOTICE, errno, "Shield signal failed");
+        CLog::Log(LOG_LEVEL_NOTICE, "Shield signal failed");
     }
 
     /* stSet title */
@@ -85,7 +85,8 @@ void MasterProcessCycle()
         /* Blocked here, waiting for a signal, at this time the process is suspended, 
          * does not occupy CPU time, only to receive the signal will be awakened (return)
          * At this time, the master process is completely driven by signals. */
-        sigsuspend(&stSet); 
+        CLog::Log("Master process wait a signal");
+        sigsuspend(&stSet);
         /* more for future */
     }/*  end for(;;) */
     
@@ -104,7 +105,7 @@ void MasterProcessCycle()
 static void StartWorkerProcesses(int iWorkProcessCount)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "StartWorkerProcesses track");
+    CLog::Log(LOG_LEVEL_TRACK, "StartWorkerProcesses track");
 
     /* master进程在走这个循环，来创建若干个子进程 */
     for(int i = 0; i < iWorkProcessCount; i++)
@@ -125,14 +126,14 @@ static void StartWorkerProcesses(int iWorkProcessCount)
 static int SpawnProcess(int iWorkProcNo)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "SpawnProcess track");
+    CLog::Log(LOG_LEVEL_TRACK, "SpawnProcess track");
 
     pid_t pid = fork();
     /* 0: Child process, or: parent process*/
     switch (pid)
     {
     case -1:/* failde */
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "Fork subprocess failed, iWorkProcNo: %d", iWorkProcNo);
+        CLog::Log(LOG_LEVEL_ERR, errno, "Fork subprocess failed, iWorkProcNo: %d", iWorkProcNo);
         return XiaoHG_ERROR;
     case 0:/* Child process */
         /* change process id*/
@@ -159,7 +160,7 @@ static int SpawnProcess(int iWorkProcNo)
 static void WorkerProcessCycle(int iWorkProcNo) 
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "WorkerProcessCycle track");
+    CLog::Log(LOG_LEVEL_TRACK, "WorkerProcessCycle track");
 
     /* stSet process id, this is worker process id = WORKER_PROCESS */
     g_iProcessID = WORKER_PROCESS;
@@ -192,7 +193,7 @@ static void WorkerProcessCycle(int iWorkProcNo)
 static void WorkerProcessInit(int iWorkProcNo)
 {
     /* function track */
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_TRACK, 0, "WorkerProcessInit track");
+    CLog::Log(LOG_LEVEL_TRACK, "WorkerProcessInit track");
 
     sigset_t stSet; 
     sigemptyset(&stSet);  /* clear signals */
@@ -200,7 +201,7 @@ static void WorkerProcessInit(int iWorkProcNo)
     if (sigprocmask(SIG_SETMASK, &stSet, NULL) == -1)
     {
         /* now not exit */
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_NOTICE, errno, "Worker process (%d) Set signals failed", iWorkProcNo);
+        CLog::Log(LOG_LEVEL_NOTICE, "Worker process (%d) Set signals failed", iWorkProcNo);
     }
 
     CConfig *pConfig = CConfig::GetInstance();
@@ -209,7 +210,7 @@ static void WorkerProcessInit(int iWorkProcNo)
     /* create thread pool*/
     if(g_ThreadPool.Create(iThreadCount) != XiaoHG_SUCCESS)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "Worker process (%d) create thread pool failed", iWorkProcNo);
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "Worker process (%d) create thread pool failed", iWorkProcNo);
         exit(-2);
     }
     /* more 1 sec insure all thread is runings */
@@ -218,17 +219,17 @@ static void WorkerProcessInit(int iWorkProcNo)
     /* Init */
     if(g_LogicSocket.InitializeSubProc() != XiaoHG_SUCCESS) 
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "Worker process (%d) InitializeSubProc failed", iWorkProcNo);
+        CLog::Log("Worker process (%d) InitializeSubProc failed", iWorkProcNo);
         exit(-2);
     }
     
     /* Init Epoll */
     if(g_LogicSocket.EpollInit() != XiaoHG_SUCCESS)
     {
-        XiaoHG_Log(LOG_ALL, LOG_LEVEL_ERR, errno, "Worker process (%d) EpollInit failed", iWorkProcNo);
+        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "Worker process (%d) EpollInit failed", iWorkProcNo);
         exit(-2);
     }
 
-    XiaoHG_Log(LOG_ALL, LOG_LEVEL_INFO, 0, "Worker process (%d) Init successful", iWorkProcNo);
+    CLog::Log("Worker process (%d) Init successful", iWorkProcNo);
     return;
 }

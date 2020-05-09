@@ -4,7 +4,7 @@
 
 #.PHONY:all clean 
 
-ifeq ($(DEBUG),true)
+ifeq ($(DEBUG), true)
 #-g是生成调试信息。GNU调试器可以利用该信息
 CC = g++ -std=c++11 -g -Werror
 VERSION = debug
