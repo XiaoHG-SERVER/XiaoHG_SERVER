@@ -48,7 +48,6 @@ public:
 	};
 	
 public:
-
 	void InitCRC32Table();
     unsigned int Reflect(unsigned int uiRef, char ch);
     int Get_CRC(unsigned char* ucBuffer, unsigned int uiDWSize);

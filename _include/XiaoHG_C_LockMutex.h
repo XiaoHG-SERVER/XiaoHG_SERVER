@@ -17,11 +17,11 @@ public:
 	CLock(pthread_mutex_t *pMutex)
 	{
 		m_pMutex = pMutex;
-		pthread_mutex_lock(m_pMutex); 	/* lock */
+		pthread_mutex_lock(m_pMutex); /* lock */
 	}
 	~CLock()
 	{
-		pthread_mutex_unlock(m_pMutex); /* unlock */
+		pthread_mutex_unlock(m_pMutex);	/* unlock */
 	}
 private:
 	pthread_mutex_t *m_pMutex;

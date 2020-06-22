@@ -23,6 +23,8 @@
 #include "XiaoHG_C_Socket.h"
 #include "XiaoHG_C_Memory.h"
 #include "XiaoHG_C_LockMutex.h"
+#include "XiaoHG_C_Log.h"
+#include "XiaoHG_error.h"
 
 #define __THIS_FILE__ "XiaoHG_C_SocketConn.cxx"
 
@@ -101,17 +103,13 @@ void connection_s::PutOneToFree()
  * =================================================================*/
 void CSocket::InitConnectionPool()
 {
-    /* function track */
-    CLog::Log(LOG_LEVEL_TRACK, "CSocket::InitConnectionPool track");
-
     LPCONNECTION_T pConn = NULL;
-    CMemory *pMemory = CMemory::GetInstance();   
     /* Create */
     for(int i = 0; i < m_EpollCreateConnectCount; i++) 
     {
         /* Apply for memory, because the new char is allocated here, the constructor cannot be executed
          * so we need to call the constructor manually */
-        pConn = (LPCONNECTION_T)pMemory->AllocMemory(sizeof(CONNECTION_T), true); 
+        pConn = (LPCONNECTION_T)m_pMemory->AllocMemory(sizeof(CONNECTION_T), true); 
         pConn = new(pConn) CONNECTION_T();
         pConn->GetOneToUse();
         m_ConnectionList.push_back(pConn);
@@ -119,9 +117,6 @@ void CSocket::InitConnectionPool()
     } /* end for */
     /* In the begining is some length */
     m_FreeConnectionCount = m_TotalConnectionCount = m_ConnectionList.size(); 
-
-    CLog::Log("Init connection pool successful");
-    return;
 }
 
 /* =================================================================
@@ -151,8 +146,7 @@ LPCONNECTION_T CSocket::GetConnection(int iSockFd)
     }
 
     /* this is no more free pConnection for, need to alloc more for use */
-    CMemory *pMemory = CMemory::GetInstance();
-    LPCONNECTION_T pConn = (LPCONNECTION_T)pMemory->AllocMemory(sizeof(CONNECTION_T), true);
+    LPCONNECTION_T pConn = (LPCONNECTION_T)m_pMemory->AllocMemory(sizeof(CONNECTION_T), true);
     pConn = new(pConn) CONNECTION_T();
     pConn->GetOneToUse();
     m_ConnectionList.push_back(pConn);
@@ -255,7 +249,7 @@ void* CSocket::ServerRecyConnectionThreadProc(void* pThreadData)
     while(true)
     {   
         /* Check once every 1000ms */
-        usleep(CHECK_RECYCONN_TIME * 1000);
+        usleep(CHECK_RECYCONN_TIMER * 1000);
         /* Regardless of the situation, first of all the actions that should be done when this condition is established, 
          * the first thing to do is to determine whether there is a pConnection in the delayed collection queue 
          * that requires delayed collection. 200 milliseconds coming */
@@ -381,7 +375,6 @@ void CSocket::ClearConnections()
     CLog::Log(LOG_LEVEL_TRACK, "CSocket::ClearConnections track");
     
     LPCONNECTION_T pConn = NULL;
-	CMemory *pMemory = CMemory::GetInstance();
 	while(!m_ConnectionList.empty())
 	{
         /* this is nedd us Call the destructor manually 
@@ -391,6 +384,6 @@ void CSocket::ClearConnections()
 		pConn = m_ConnectionList.front();
 		m_ConnectionList.pop_front(); 
         pConn->~CONNECTION_T();
-		pMemory->FreeMemory(pConn);
+		m_pMemory->FreeMemory(pConn);
 	}
 }

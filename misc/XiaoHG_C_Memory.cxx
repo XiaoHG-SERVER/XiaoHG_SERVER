@@ -28,15 +28,9 @@ CMemory *CMemory::m_Instance = NULL;
  * =================================================================*/
 void* CMemory::AllocMemory(int iMemCount, bool bIsMemSet)
 {
-    /* function track */
-    CLog::Log(LOG_LEVEL_TRACK, "CMemory::AllocMemory track");
 
 	void *pTmpData = (void *)new char[iMemCount];
-    if(pTmpData != NULL)
-    {
-        CLog::Log(LOG_LEVEL_DEBUG, "Alloc memory is: %p", pTmpData);
-    }
-    else
+    if(pTmpData == NULL)
     {
         CLog::Log(LOG_LEVEL_ERR, errno, "Alloc memory failed");
         return NULL;

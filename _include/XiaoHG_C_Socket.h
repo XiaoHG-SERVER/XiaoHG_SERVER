@@ -17,6 +17,9 @@
 #include <map>
 #include "XiaoHG_Comm.h"
 
+class CMemory;
+class CConfig;
+
 /* Connection queue completed */
 #define XHG_LISTEN_SOCKETS 511
 
@@ -114,7 +117,7 @@ class CSocket
 public:
 	CSocket();
 	virtual ~CSocket();
-	virtual int Initalize();				/* Initialization function [executed in parent process] */
+	void Init();						/* Initialization function [executed in parent process] */
 	virtual int InitializeSubProc();		/* Initialization function [executed in subprocess] */
 	virtual void ShutdownSubProc();			/* Close exit function [execute in child process] */
 	void PrintTDInfo();						/* Print statistical information for use in dimension testing */
@@ -221,6 +224,10 @@ private:/* Thread struct */
         /* Destructor */
         ~ThreadItem(){}        
     };
+
+protected:
+	static CMemory *m_pMemory;
+	static CConfig *m_pConfig;
 
 private:
 	/* Thread pool config */

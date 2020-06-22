@@ -25,7 +25,9 @@
 #include "XiaoHG_C_Crc32.h"
 #include "XiaoHG_C_SLogic.h"  
 #include "XiaoHG_LogicComm.h"  
-#include "XiaoHG_C_LockMutex.h"  
+#include "XiaoHG_C_LockMutex.h"
+#include "XiaoHG_C_Log.h"
+#include "XiaoHG_error.h"
 
 #define __THIS_FILE__ "XiaoHG_C_SLogic.cxx"
 
@@ -51,7 +53,11 @@ static const LogicHandlerCallBack StatusHandler[] =
 /* How many commands are there, you can know when compiling */
 #define TOTAL_COMMANDS sizeof(StatusHandler)/sizeof(LogicHandlerCallBack)
 
-CLogicSocket::CLogicSocket(){}
+CLogicSocket::CLogicSocket()
+{
+    Init();
+}
+
 CLogicSocket::~CLogicSocket(){}
 
 /* =================================================================
@@ -61,13 +67,9 @@ CLogicSocket::~CLogicSocket(){}
  * function name: Initalize
  * discription: Init socket
  * =================================================================*/
-int CLogicSocket::Initalize()
+void CLogicSocket::Init()
 {
-    /* function track */
-    CLog::Log(LOG_LEVEL_TRACK, "CLogicSocket::Initalize track");
-
-    /* Call the parent class function of the same name */
-    return CSocket::Initalize();
+    
 }
 
 /* =================================================================
@@ -168,7 +170,6 @@ void CLogicSocket::HeartBeatTimeOutCheck(LPMSG_HEADER_T pstMsgHeader, time_t Cur
     /* function track */
     CLog::Log(LOG_LEVEL_TRACK, "CLogicSocket::HeartBeatTimeOutCheck track");
 
-    CMemory *pMemory = CMemory::GetInstance();
     /* check the connect is OK */
     if(pstMsgHeader->uiCurrentSequence == pstMsgHeader->pConn->uiCurrentSequence)
     {
@@ -190,12 +191,12 @@ void CLogicSocket::HeartBeatTimeOutCheck(LPMSG_HEADER_T pstMsgHeader, time_t Cur
             CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "Heart beat check time out kick socket: %d", pConn->iSockFd);
             CloseConnectionToRecy(pConn);
         }
-        pMemory->FreeMemory(pstMsgHeader);
+        m_pMemory->FreeMemory(pstMsgHeader);
     }
     /* This connect is broken */
     else
     {
-        pMemory->FreeMemory(pstMsgHeader);
+        m_pMemory->FreeMemory(pstMsgHeader);
     }
     return;
 }
@@ -206,8 +207,7 @@ void CLogicSocket::SendNoBodyPkgToClient(LPMSG_HEADER_T pMsgHeader,unsigned shor
     /* function track */
     CLog::Log(LOG_LEVEL_TRACK, "CLogicSocket::SendNoBodyPkgToClient track");
 
-    CMemory *pMemory = CMemory::GetInstance();
-    char *pSendBuff = (char *)pMemory->AllocMemory(m_iLenMsgHeader + m_iLenPkgHeader,false);
+    char *pSendBuff = (char *)m_pMemory->AllocMemory(m_iLenMsgHeader + m_iLenPkgHeader,false);
 
     char *pTmpBuff = pSendBuff;
 	memcpy(pTmpBuff,pMsgHeader, m_iLenMsgHeader);
@@ -257,12 +257,11 @@ bool CLogicSocket::HandleRegister(LPCONNECTION_T pConn, LPMSG_HEADER_T pMsgHeade
     /* Process the packet ... */
 
     /* Assuming the packet is processed, we need to reply to the client */
-    CMemory *pMemory = CMemory::GetInstance();
 	CCRC32 *pCrc32 = CCRC32::GetInstance();
     /* Analog send */
     LPCOMM_PKG_HEADER pPkgHeader = NULL;
     int iMsgBodylen = sizeof(REGISTER_T);
-    char *pSendBuff = (char *)pMemory->AllocMemory(m_iLenMsgHeader + m_iLenPkgHeader + iMsgBodylen, false);
+    char *pSendBuff = (char *)m_pMemory->AllocMemory(m_iLenMsgHeader + m_iLenPkgHeader + iMsgBodylen, false);
     
     /* Full message header */
     memcpy(pSendBuff, pMsgHeader, m_iLenMsgHeader);
@@ -306,11 +305,10 @@ bool CLogicSocket::HandleLogin(LPCONNECTION_T pConn,LPMSG_HEADER_T pMsgHeader,ch
                                                         pRecvMsgInfo->UserName, pRecvMsgInfo->Password);
 
 	LPCOMM_PKG_HEADER pPkgHeader;
-	CMemory *pMemory = CMemory::GetInstance();
 	CCRC32 *pCrc32 = CCRC32::GetInstance();
 
     int iMsgBodylen = sizeof(LOGIN_T);  
-    char *pSendBuff = (char *)pMemory->AllocMemory(m_iLenMsgHeader + m_iLenPkgHeader + iMsgBodylen, false);    
+    char *pSendBuff = (char *)m_pMemory->AllocMemory(m_iLenMsgHeader + m_iLenPkgHeader + iMsgBodylen, false);    
     memcpy(pSendBuff, pMsgHeader, m_iLenMsgHeader);    
     pPkgHeader = (LPCOMM_PKG_HEADER)(pSendBuff + m_iLenMsgHeader);
     pPkgHeader->sMsgCode = CMD_LOGIN;
@@ -345,8 +343,7 @@ bool CLogicSocket::HandleHeartbeat(LPCONNECTION_T pConn, LPMSG_HEADER_T pMsgHead
     /* Refresh the time of the last heartbeat packet received */
     pConn->iLastHeartBeatTime = time(NULL); 
     
-    CMemory *pMemory = CMemory::GetInstance();
-    char *pSendBuff = (char *)pMemory->AllocMemory(m_iLenMsgHeader + m_iLenPkgHeader, false);
+    char *pSendBuff = (char *)m_pMemory->AllocMemory(m_iLenMsgHeader + m_iLenPkgHeader, false);
     char *pTmpBuff = pSendBuff;
 	memcpy(pTmpBuff, pMsgHeader, m_iLenMsgHeader);
 	pTmpBuff += m_iLenMsgHeader;

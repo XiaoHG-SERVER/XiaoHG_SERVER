@@ -20,28 +20,25 @@
 #include "XiaoHG_Macro.h"
 #include "XiaoHG_Global.h"
 #include "XiaoHG_Func.h"
-#include <XiaoHG_C_Socket.h>
+#include "XiaoHG_C_Socket.h"
 #include "XiaoHG_C_Memory.h"
 #include "XiaoHG_C_LockMutex.h"
+#include "XiaoHG_C_Log.h"
+#include "XiaoHG_error.h"
 
 #define __THIS_FILE__ "XiaoHG_C_Socket.cxx"
 
+#define THREAD_ITEM_COUNT 3
+
+CMemory* CSocket::m_pMemory = CMemory::GetInstance();
+CConfig* CSocket::m_pConfig = CConfig::GetInstance();
+
+/* Thread process */
+typedef void* (*ThreadProc)(void *pThreadData);
+
 CSocket::CSocket()
 {
-    m_EpollCreateConnectCount = 1;                    /* Epoll max connect */
-    m_ListenPortCount = 1;                      /* Default listening port count */
-    m_RecyConnectionWaitTime = 60;              /* defult waiting for recycling time */
-    m_EpollHandle = -1;                         /* Epoll handle */
-    m_iLenPkgHeader = sizeof(COMM_PKG_HEADER);  /* packet header size */
-    m_iLenMsgHeader = sizeof(MSG_HEADER_T);     /* Message header size */
-    m_iSendMsgQueueCount = 0;                   /* Send queue lenght */
-    m_TotalRecyConnectionCount = 0;                  /* Connection queue size to be released */
-    m_CurrentHeartBeatListSize = 0;                  /* Current timing queue size */
-    m_HBListEarliestTime = 0;                           /* The earliest time value of the current time */
-    m_iDiscardSendPkgCount = 0;                 /* Number of send packets dropped */
-    m_OnLineUserCount = 0;                      /* Number of online users, default 0 */
-    m_LastPrintTime = 0;                        /* Last time the statistics were printed, default 0 */
-    return;	
+    Init();
 }
 
 /* =================================================================
@@ -52,14 +49,35 @@ CSocket::CSocket()
  * discription: Init socket
  * parameter:
  * =================================================================*/
-int CSocket::Initalize()
+void CSocket::Init()
 {
-    /* function track */
-    CLog::Log(LOG_LEVEL_TRACK, "CSocket::Initalize track");
+    m_EpollHandle = -1;                         /* Epoll handle */
+    m_iLenPkgHeader = sizeof(COMM_PKG_HEADER);  /* packet header size */
+    m_iLenMsgHeader = sizeof(MSG_HEADER_T);     /* Message header size */
+    m_iSendMsgQueueCount = 0;                   /* Send queue lenght */
+    m_TotalRecyConnectionCount = 0;                  /* Connection queue size to be released */
+    m_CurrentHeartBeatListSize = 0;                  /* Current timing queue size */
+    m_HBListEarliestTime = 0;                           /* The earliest time value of the current time */
+    m_iDiscardSendPkgCount = 0;                 /* Number of send packets dropped */
+    m_OnLineUserCount = 0;                      /* Number of online users, default 0 */
+    m_LastPrintTime = 0;                        /* Last time the statistics were printed, default 0 */
 
-    LoadConfig(); /* load config */
+    m_EpollCreateConnectCount = m_pConfig->GetIntDefault("EpollCreateConnectCount");
+    m_ListenPortCount = m_pConfig->GetIntDefault("ListenPortCount");
+    m_RecyConnectionWaitTime = m_pConfig->GetIntDefault("Sock_RecyConnectionWaitTime");
+    m_IsHBTimeOutCheckEnable = m_pConfig->GetIntDefault("Sock_WaitTimeEnable");
+	m_iWaitTime = m_pConfig->GetIntDefault("Sock_MaxWaitTime");
+	m_iWaitTime = m_iWaitTime > 5 ? m_iWaitTime : 5;
+    m_iIsTimeOutKick = m_pConfig->GetIntDefault("Sock_TimeOutKick");
+    m_FloodAttackEnable = m_pConfig->GetIntDefault("Sock_FloodAttackKickEnable");
+	m_FloodTimeInterval = m_pConfig->GetIntDefault("Sock_FloodTimeInterval", 100);
+	m_FloodKickCount = m_pConfig->GetIntDefault("Sock_FloodKickCounter", 10);
+
+    /* Init connect */
+    InitConnectionPool();
+
     /* open the listen iPort */
-    return OpenListeningSockets();
+    OpenListeningSockets();
 }
 
 /* =================================================================
@@ -75,32 +93,15 @@ int CSocket::InitializeSubProc()
     /* function track */
     CLog::Log(LOG_LEVEL_TRACK, "CSocket::InitializeSubProc track");
 
-    /* Message queue mutex initialization */
-    if(pthread_mutex_init(&m_SendMessageQueueMutex, NULL) != 0)
+    /* Init mutex*/
+    pthread_mutex_t pmMutexs[] = {m_SendMessageQueueMutex, m_ConnectionMutex, m_RecyConnQueueMutex, m_TimeQueueMutex};
+    for (int i = 0; i < sizeof(pmMutexs) / sizeof(pmMutexs[0]); i++)
     {
-        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_init(m_SendMessageQueueMutex) failed");
-        return XiaoHG_ERROR;
-    }
-
-    /* Connection queue related mutex initialization */
-    if(pthread_mutex_init(&m_ConnectionMutex, NULL) != 0)
-    {
-        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_init(m_ConnectionMutex) failed");
-        return XiaoHG_ERROR;
-    }
-
-    /* Initialization of the mutex related to the pConnection recovery queue */
-    if(pthread_mutex_init(&m_RecyConnQueueMutex, NULL) != 0)
-    {
-        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_init(m_RecyConnQueueMutex) failed");
-        return XiaoHG_ERROR;   
-    }
-
-    /* Initialization of the mutex related to the time processing queue */
-    if(pthread_mutex_init(&m_TimeQueueMutex, NULL) != 0)
-    {
-        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_init(m_TimeQueueMutex) failed");
-        return XiaoHG_ERROR; 
+        if(pthread_mutex_init(&pmMutexs[i], NULL) != 0)
+        {
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_init(%d) failed", i);
+            return XiaoHG_ERROR;
+        }
     }
    
     /* Initialize the semaphore related to the message. The semaphore is used 
@@ -111,35 +112,20 @@ int CSocket::InitializeSubProc()
         return XiaoHG_ERROR; 
     }
 
-    /* send msg thread */
-    ThreadItem *pSendQueueThreadItem = new ThreadItem(this);  
-    m_ThreadPoolVector.push_back(pSendQueueThreadItem);
-    if(pthread_create(&pSendQueueThreadItem->_Handle, NULL, SendMsgQueueThreadProc, pSendQueueThreadItem) != 0)
+    /* Create threads */
+    ThreadItem* pThreadItems[THREAD_ITEM_COUNT] = { 0 };
+    ThreadProc pfTmpThreadPro[] = {SendMsgQueueThreadProc, ServerRecyConnectionThreadProc, HeartBeatMonitorThreadProc};
+    for (int i = 0; i < THREAD_ITEM_COUNT; i++)
     {
-        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_create(SendMsgQueueThreadProc) failed");
-        return XiaoHG_ERROR;
-    }
+        pThreadItems[i] = new ThreadItem(this);
+        m_ThreadPoolVector.push_back(pThreadItems[i]);
 
-    /* recy connect thread */
-    ThreadItem *pRecyConnThreadItem = new ThreadItem(this);
-    m_ThreadPoolVector.push_back(pRecyConnThreadItem);
-    if(pthread_create(&pRecyConnThreadItem->_Handle, NULL, ServerRecyConnectionThreadProc, pRecyConnThreadItem) != 0)
-    {
-        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_create(ServerRecyConnectionThreadProc) failed");
-        return XiaoHG_ERROR; 
-    }
-
-    /* Whether to turn on the kick clock, 1：open; 0：close*/
-    if(m_IsHBTimeOutCheckEnable == 1)
-    {
-        /* test head beat thread */
-        ThreadItem *pTimemonitor = new ThreadItem(this);
-        m_ThreadPoolVector.push_back(pTimemonitor);
-        if(pthread_create(&pTimemonitor->_Handle, NULL, HeartBeatMonitorThreadProc, pTimemonitor) != 0)
+        if(pthread_create(&pThreadItems[i]->_Handle, NULL, pfTmpThreadPro[i], pThreadItems[i]) != 0)
         {
-            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_create(HeartBeatMonitorThreadProc) failed");
-            return XiaoHG_ERROR; 
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_create(%d) failed", i);
+            return XiaoHG_ERROR;
         }
+        CLog::Log("pthread_create(%d) successful", i);
     }
     
     CLog::Log("Subprocess init successful");
@@ -172,7 +158,7 @@ void CSocket::ShutdownSubProc()
     CLog::Log(LOG_LEVEL_TRACK, "CSocket::ShutdownSubProc track");
 
     /* make ServerSendQueueThread go on */
-    if(sem_post(&m_SemEventSendQueue)==-1)  
+    if(sem_post(&m_SemEventSendQueue) == -1)  
     {
         CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "release send message thread failed");
     }
@@ -188,7 +174,9 @@ void CSocket::ShutdownSubProc()
 	for(iter = m_ThreadPoolVector.begin(); iter != m_ThreadPoolVector.end(); iter++)
 	{
 		if(*iter)
+        {
 			delete *iter;
+        }
 	}
 	m_ThreadPoolVector.clear();
 
@@ -219,13 +207,12 @@ void CSocket::ClearMsgSendQueue()
     CLog::Log(LOG_LEVEL_TRACK, "CSocket::ClearMsgSendQueue track");
 
 	char *pMemPoint = NULL;
-	CMemory *pMemory = CMemory::GetInstance();
 	while(!m_MsgSendQueue.empty())
 	{
 		pMemPoint = m_MsgSendQueue.front();
 		m_MsgSendQueue.pop_front(); 
-		pMemory->FreeMemory(pMemPoint);
-	}	
+		m_pMemory->FreeMemory(pMemPoint);
+	}
 }
 
 /* =================================================================
@@ -236,33 +223,11 @@ void CSocket::ClearMsgSendQueue()
  * discription: load configs
  * parameter:
  * =================================================================*/
+
 void CSocket::LoadConfig()
 {
     /* function track */
     CLog::Log(LOG_LEVEL_TRACK, "CSocket::LoadConfig track");
-
-    CConfig *pConfig = CConfig::GetInstance();
-    /* The largest item connected of epoll*/
-    m_EpollCreateConnectCount = pConfig->GetIntDefault("EpollCreateConnectCount", m_EpollCreateConnectCount);
-    /* Get listen numbers */
-    m_ListenPortCount = pConfig->GetIntDefault("ListenPortCount", m_ListenPortCount);
-    /* Get delayed recovery time */
-    m_RecyConnectionWaitTime = pConfig->GetIntDefault("Sock_RecyConnectionWaitTime", m_RecyConnectionWaitTime);
-    /* delete connect tick */
-    m_IsHBTimeOutCheckEnable = pConfig->GetIntDefault("Sock_WaitTimeEnable", 0);
-    /* how long chick heat beat */
-	m_iWaitTime = pConfig->GetIntDefault("Sock_MaxWaitTime", m_iWaitTime);
-    /* It is not recommended to be less than 5 seconds because it does not need to be too frequent */
-	m_iWaitTime = m_iWaitTime > 5 ? m_iWaitTime : 5;
-    /* Time out, delete connect */
-    m_iIsTimeOutKick = pConfig->GetIntDefault("Sock_TimeOutKick", 0);
-    /* Flood chick */
-    m_FloodAttackEnable = pConfig->GetIntDefault("Sock_FloodAttackKickEnable", 0);
-    /* Flood chick time is 100ms for a time */
-	m_FloodTimeInterval = pConfig->GetIntDefault("Sock_FloodTimeInterval", 100);
-    /* How many times have you kicked this person */
-	m_FloodKickCount = pConfig->GetIntDefault("Sock_FloodKickCounter", 10);
-    return;
 }
 
 /* =================================================================
@@ -275,18 +240,14 @@ void CSocket::LoadConfig()
  * =================================================================*/
 int CSocket::OpenListeningSockets()
 {
-    /* function track */
-    CLog::Log(LOG_LEVEL_TRACK, "CSocket::OpenListeningSockets track");
-
     int iPort = 0;
     int iSockFd = 0;
     char strListeningPortInfo[100] = { 0 };
     struct sockaddr_in serv_addr;
-    memset(&serv_addr,0,sizeof(serv_addr));
+    memset(&serv_addr, 0, sizeof(serv_addr));
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    CConfig *pConfig = CConfig::GetInstance();
 
     for(int i = 0; i < m_ListenPortCount; i++)
     {
@@ -308,14 +269,19 @@ int CSocket::OpenListeningSockets()
 
         /* set listening iPort */
         sprintf(strListeningPortInfo, "ListenPort%d", i);
-        iPort = pConfig->GetIntDefault(strListeningPortInfo, 10000);
+        iPort = m_pConfig->GetIntDefault(strListeningPortInfo, 10000);
         serv_addr.sin_port = htons((in_port_t)iPort); /* in_port_t->uint16_t */
 
         /* bind */
         if(bind(iSockFd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == -1)
         {
-            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "bind socket failed: %d, socket id: %d", i, iSockFd);
+            //CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "bind socket failed: %d, socket id: %d", i, iSockFd);
+            printf("bind socket failed: %d, socket id: %d, errno: %d, errStr: %s\n", i, iSockFd, errno, strerror(errno));
+        #ifdef __LOG_TRACK__
+            CLog::Log("bind socket failed: %d, socket id: %d", i, iSockFd);
+        #endif //!__LOG_TRACK__
             close(iSockFd);
+            exit(0);
             return XiaoHG_ERROR;
         }
         
@@ -343,7 +309,6 @@ int CSocket::OpenListeningSockets()
         return XiaoHG_ERROR;
     }
 
-    CLog::Log("Open listening sockets successful");
     return XiaoHG_SUCCESS;
 }
 
@@ -356,10 +321,7 @@ int CSocket::OpenListeningSockets()
  * parameter:
  * =================================================================*/
 int CSocket::SetNonBlocking(int iSockFd) 
-{    
-    /* function track */
-    CLog::Log(LOG_LEVEL_TRACK, "CSocket::SetNonBlocking track");
-
+{
     int nb = 1; /* 0：clean, 1：set */
     if(ioctl(iSockFd, FIONBIO, &nb) == -1) 
     {
@@ -382,7 +344,6 @@ void CSocket::SendMsg(char *pSendBuff)
     /* function track */
     CLog::Log(LOG_LEVEL_TRACK, "CSocket::SendMsg track");
 
-    CMemory *pMemory = CMemory::GetInstance();
     /* m_SendMessageQueueMutex lock */
     CLock lock(&m_SendMessageQueueMutex);
     /* Send message queue is too large may also bring risks to the server */
@@ -393,7 +354,7 @@ void CSocket::SendMsg(char *pSendBuff)
          * transmission for server security. Although it may cause problems for the client, 
          * it is better than the server. Stability is much better */
         ++m_iDiscardSendPkgCount;
-        pMemory->FreeMemory(pSendBuff);
+        m_pMemory->FreeMemory(pSendBuff);
 		return;
     }
     /* Process packets normally */
@@ -406,7 +367,7 @@ void CSocket::SendMsg(char *pSendBuff)
     {
         CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "Found that a user %d has a large backlog of packets to be sent", pConn->iSockFd); 
         ++m_iDiscardSendPkgCount;
-        pMemory->FreeMemory(pSendBuff);
+        m_pMemory->FreeMemory(pSendBuff);
         CloseConnectionToRecy(pConn);
 		return;
     }
@@ -521,11 +482,9 @@ int CSocket::EpollInit()
         CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "create epoll failed");
         return XiaoHG_ERROR; 
     }
-    /* Init connect */
-    InitConnectionPool();
-    std::vector<LPLISTENING_T>::iterator pos;
+
     /* Set listening socket join epoll event */	
-	for(pos = m_ListenSocketList.begin(); pos != m_ListenSocketList.end(); pos++)
+	for(std::vector<LPLISTENING_T>::iterator pos = m_ListenSocketList.begin(); pos != m_ListenSocketList.end(); pos++)
     {
         /* get free pConnection from free list for new socket */
         LPCONNECTION_T pConn = GetConnection((*pos)->iSockFd); 
@@ -538,10 +497,12 @@ int CSocket::EpollInit()
          * which is convenient for finding the monitoring object through 
          * the pConnection object. */
         pConn->listening = (*pos);  
+
         /* The monitoring object is associated with the pConnection object, 
          * which is convenient for finding the pConnection object through 
          * the monitoring object. */
-        (*pos)->pConnection = pConn;  
+        (*pos)->pConnection = pConn; 
+         
         /* Set the processing method for the read event of the listening iPort, 
          * because the listening iPort is used to wait for the other party to 
          * send a three-way handshake, so the listening iPort is concerned with 
@@ -764,7 +725,6 @@ void* CSocket::SendMsgQueueThreadProc(void *pThreadData)
 
     ThreadItem *pThread = static_cast<ThreadItem *>(pThreadData);
     CSocket *pSocketObj = pThread->_pThis; 
-    CMemory *pMemory = CMemory::GetInstance();
     
     while(!g_bIsStopEvent)
     {
@@ -826,7 +786,7 @@ void* CSocket::SendMsgQueueThreadProc(void *pThreadData)
                     ++pos;
                     pSocketObj->m_MsgSendQueue.erase(posTmp);
                     --pSocketObj->m_iSendMsgQueueCount;
-                    pMemory->FreeMemory(pMsgBuff);
+                    m_pMemory->FreeMemory(pMsgBuff);
                     continue; /* pNext message */
                 } /* end if */
 
@@ -869,7 +829,7 @@ void* CSocket::SendMsgQueueThreadProc(void *pThreadData)
                         /* The data successfully sent is equal to the data required to be sent, 
                          * indicating that all the transmissions are successful, 
                          * and the sending buffer is gone [All the data is sent] */
-                        pMemory->FreeMemory(pConn->pSendMsgMemPointer);
+                        m_pMemory->FreeMemory(pConn->pSendMsgMemPointer);
                     }
                     /* Not all the transmission is completed (EAGAIN), 
                      * the data is only sent out partly, 
@@ -909,7 +869,7 @@ void* CSocket::SendMsgQueueThreadProc(void *pThreadData)
                      * and the error code should be EAGAIN, so comprehensively think that in this case, 
                      * this The sent packet was discarded [the socket processing was closed according to the peer] 
                      * Then the packet was killed and not sent. */
-                    pMemory->FreeMemory(pConn->pSendMsgMemPointer);
+                    m_pMemory->FreeMemory(pConn->pSendMsgMemPointer);
                     continue; /* pNext message */
                 }
                 else if(uiSendLen == -1)
@@ -937,7 +897,7 @@ void* CSocket::SendMsgQueueThreadProc(void *pThreadData)
                      * It is generally considered that the peer is disconnected, 
                      * waiting for recv() to disconnect the socket and recycle resources. */
                     CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "Send failed sockfd: %d", pConn->iSockFd);
-                    pMemory->FreeMemory(pConn->pSendMsgMemPointer);
+                    m_pMemory->FreeMemory(pConn->pSendMsgMemPointer);
                     continue; /* pNext message */ 
                 }
             } /* end while(pos != posEnd) */

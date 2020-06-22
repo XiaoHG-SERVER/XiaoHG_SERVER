@@ -6,10 +6,10 @@
 
 ifeq ($(DEBUG), true)
 #-g是生成调试信息。GNU调试器可以利用该信息
-CC = g++ -std=c++11 -g -Werror
+CC = g++ -std=c++11 -g -Werror #-D__LOG_TRACK__
 VERSION = debug
 else
-CC = g++ -std=c++11 -Werror
+CC = g++ -std=c++11 -Werror #-D__LOG_TRACK__
 VERSION = release
 endif
 

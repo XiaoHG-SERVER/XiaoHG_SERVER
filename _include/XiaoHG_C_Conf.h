@@ -8,9 +8,13 @@
 #define __XiaoHG_CONF_H__
 
 #include <vector>
-#include "XiaoHG_Global.h"
-#include "XiaoHG_Macro.h"
-#include "XiaoHG_Func.h"
+
+/* config struct */
+typedef struct config_item_s
+{
+	char ItemName[50];		/* name */
+	char ItemContent[500];	/* content */
+}CONF_ITEM, *LPCONF_ITEM;
 
 class CConfig
 {
@@ -53,11 +57,11 @@ public:
 	};
 	
 private:
-	int LoadConfigFileToList();
+	int Initialization();
 
 public:
 	const char *GetString(const char *pItemName);
-	int GetIntDefault(const char *pItemName, const int iDef);
+	int GetIntDefault(const char *pItemName, const int iDef = 0);
 
 public:
 	/* config list */

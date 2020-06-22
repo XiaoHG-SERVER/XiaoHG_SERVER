@@ -11,6 +11,8 @@
 #include <pthread.h>
 #include <atomic>
 
+class CMemory;
+
 /* Thread pool related classes */
 class CThreadPool
 {
@@ -19,9 +21,9 @@ public:
     ~CThreadPool();        
 
 public:/* Thread pool creation, business processing, business triggering */
-    int Create(int iThreadNum); /* Create all threads in this thread pool */
+    int Init(); /* Create all threads in this thread pool */
     /* After receiving a complete message, enter the message queue and trigger the thread in the thread pool to process the message */
-    void PutMsgRecvQueueAndSignal(char *pMsgBuff);      
+    void PutMsgRecvQueueAndSignal(char *pMsgBuff);
     void CallRecvMsgHandleThread();    /* Here comes the task, transfer the threads in a thread pool to work */
 
 public:/* Reserved for measurement */
@@ -48,6 +50,9 @@ private:/* Thread structure */
         ThreadItem(CThreadPool *pthis):_pThis(pthis), bIsRunning(false){}
         ~ThreadItem(){}        
     };
+
+protected:
+    static CMemory* m_pMemory;
 
 private:
     /* Thread pool creation, management, scheduling */

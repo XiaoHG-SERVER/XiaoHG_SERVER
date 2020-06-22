@@ -17,7 +17,7 @@ class CLogicSocket : public CSocket
 public:
 	CLogicSocket();
 	virtual ~CLogicSocket();
-	virtual int Initalize(); /* Init */
+	void Init(); /* Init */
 
 public:
 

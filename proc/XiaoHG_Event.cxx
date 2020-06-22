@@ -14,6 +14,7 @@
 #include "XiaoHG_Func.h"
 #include "XiaoHG_Macro.h"
 #include "XiaoHG_C_Conf.h"
+#include "XiaoHG_C_Log.h"
 
 #define __THIS_FILE__ "XiaoHG_Event.cxx"
 

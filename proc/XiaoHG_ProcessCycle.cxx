@@ -14,12 +14,11 @@
 #include "XiaoHG_Func.h"
 #include "XiaoHG_Macro.h"
 #include "XiaoHG_C_Conf.h"
+#include "XiaoHG_C_Log.h"
+#include "XiaoHG_error.h"
+#include "XiaoHG_C_Signal.h"
 
 #define __THIS_FILE__ "XiaoHG_ProcessCycle.cxx"
-
-#define MAX_PROCESS_TITILE_LEN  1000
-#define WORKER_PROCESS_TITLE    "XiaoHG_SERVER worker process"
-#define MASTER_PROCESS_TITLE    "XiaoHG_SERVER master process"
 
 static void StartWorkerProcesses(int iThreadNums);
 static int SpawnProcess(int iThreadNums);
@@ -35,50 +34,21 @@ static void WorkerProcessInit(int iWorkProcNo);
  * =================================================================*/
 void MasterProcessCycle()
 {
-    /* function track */
-    CLog::Log(LOG_LEVEL_TRACK, "MasterProcessCycle track");
-
-    sigset_t stSet;        /* signal stSet */
-    sigemptyset(&stSet);   /* clrean signals */
-
-    /* The following signals are not expected to be received during the execution of this function 
-        (protect the critical section of code that is not expected to be interrupted by the signal) */
-    /* fork()This method is used when the child process prevents signal interference */
-    /* Here is to prevent the phenomenon that the creation process fails due to receiving some 
-        signals when creating the child process, to prevent signal interference */
-    /* You can add other signals to be shielded according to actual needs */
-    sigaddset(&stSet, SIGCHLD);     /* Child process state changes */
-    sigaddset(&stSet, SIGALRM);     /* Timer timeout */
-    sigaddset(&stSet, SIGIO);       /* Asynchronous I / O */
-    sigaddset(&stSet, SIGINT);      /* Terminal break */
-    sigaddset(&stSet, SIGHUP);      /* Disconnect */
-    sigaddset(&stSet, SIGUSR1);     /* User-defined signals */
-    sigaddset(&stSet, SIGUSR2);     /* User-defined signals */
-    sigaddset(&stSet, SIGWINCH);    /* Terminal window size changes */
-    sigaddset(&stSet, SIGTERM);     /* termination */
-    sigaddset(&stSet, SIGQUIT);     /* Terminal exit character */
-    
-    /* Shield signal */
-    if(sigprocmask(SIG_BLOCK, &stSet, NULL) == -1)
-    {
-        CLog::Log(LOG_LEVEL_NOTICE, "Shield signal failed");
-    }
-
+    uint32_t ulSigs[] = {SIGCHLD, SIGALRM, SIGIO, SIGINT, SIGHUP, 
+                            SIGUSR1, SIGUSR2, SIGWINCH, SIGTERM, SIGQUIT};
+    CSignalCtl sigCtl(ulSigs);
+    sigCtl.RegisterSignals();
     /* stSet title */
-    SetProcTitle(MASTER_PROCESS_TITLE);
-    /* make some master msg to log file */
+    g_MainArgCtl.SetProcTitle(CConfig::GetInstance()->GetString("MasterProcessTitle"));
 
     /* get the worker process numbers from config file */
-    CConfig *pConfig = CConfig::GetInstance();
     /* if not stSet WorkerProcessesCount in the config file, the function 
      * return second parameter */
-    int iWorkProcessCount = pConfig->GetIntDefault("WorkerProcessesCount", 1);
-    
     /* create worker process */
-    StartWorkerProcesses(iWorkProcessCount);
+    StartWorkerProcesses(CConfig::GetInstance()->GetIntDefault("WorkerProcessesCount", 1));
 
     /* this is master process cycle */
-    sigemptyset(&stSet);
+    sigCtl.SetSigEmpty();
     
     for ( ;; ) 
     {
@@ -86,7 +56,7 @@ void MasterProcessCycle()
          * does not occupy CPU time, only to receive the signal will be awakened (return)
          * At this time, the master process is completely driven by signals. */
         CLog::Log("Master process wait a signal");
-        sigsuspend(&stSet);
+        sigCtl.SetSigSuspend();
         /* more for future */
     }/*  end for(;;) */
     
@@ -165,7 +135,7 @@ static void WorkerProcessCycle(int iWorkProcNo)
     /* stSet process id, this is worker process id = WORKER_PROCESS */
     g_iProcessID = WORKER_PROCESS;
     /* stSet worker process name */
-    SetProcTitle(WORKER_PROCESS_TITLE);
+    g_MainArgCtl.SetProcTitle(CConfig::GetInstance()->GetString("WorkerProcessTitle"));
     /* Init worker process*/
     WorkerProcessInit(iWorkProcNo);
     /* recod some info to log file */
@@ -204,19 +174,14 @@ static void WorkerProcessInit(int iWorkProcNo)
         CLog::Log(LOG_LEVEL_NOTICE, "Worker process (%d) Set signals failed", iWorkProcNo);
     }
 
-    CConfig *pConfig = CConfig::GetInstance();
-    /* get the recv msg thread numbers from config file */
-    int iThreadCount = pConfig->GetIntDefault("ProcMsgRecvWorkThreadCount", 5);   
     /* create thread pool*/
-    if(g_ThreadPool.Create(iThreadCount) != XiaoHG_SUCCESS)
+    if(g_ThreadPool.Init() != XiaoHG_SUCCESS)
     {
         CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "Worker process (%d) create thread pool failed", iWorkProcNo);
         exit(-2);
     }
-    /* more 1 sec insure all thread is runings */
-    sleep(1);
 
-    /* Init */
+    /* Sub process init */
     if(g_LogicSocket.InitializeSubProc() != XiaoHG_SUCCESS) 
     {
         CLog::Log("Worker process (%d) InitializeSubProc failed", iWorkProcNo);

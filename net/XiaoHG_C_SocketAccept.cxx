@@ -21,6 +21,8 @@
 #include "XiaoHG_Global.h"
 #include "XiaoHG_Func.h"
 #include "XiaoHG_C_Socket.h"
+#include "XiaoHG_C_Log.h"
+#include "XiaoHG_error.h"
 
 #define __THIS_FILE__ "XiaoHG_C_SocketAccpet.cxx"
 
@@ -64,7 +66,7 @@ void CSocket::EpollEventAcceptHandler(LPCONNECTION_T pOldConn)
              * or EWOULDBLOCK (meaning "expect to block") when the event has not occurred. */
             if(iErr == EAGAIN)
             {
-                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "accept new connection failed");
+                CLog::Log(LOG_LEVEL_ERR, iErr, __THIS_FILE__, __LINE__, "accept new connection failed");
             }
 
             /* ECONNRESET error occurs after the other party accidentally closes the socket 
@@ -74,7 +76,7 @@ void CSocket::EpollEventAcceptHandler(LPCONNECTION_T pOldConn)
             else if (iErr == ECONNABORTED)
             {
                 /* this errno discription: “software caused connection abort” */
-                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "accept new connection failed");
+                CLog::Log(LOG_LEVEL_ERR, iErr, __THIS_FILE__, __LINE__, "accept new connection failed");
             }
 
             /* EMFILE: The iSockFd of the process has been exhausted [the total number of files / sockets 
@@ -86,7 +88,7 @@ void CSocket::EpollEventAcceptHandler(LPCONNECTION_T pOldConn)
              * resource limits must be limited to system-wide resource limits.*/
             else if (iErr == EMFILE || iErr == ENFILE) 
             {
-                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "accept new connection failed");
+                CLog::Log(LOG_LEVEL_ERR, iErr, __THIS_FILE__, __LINE__, "accept new connection failed");
             }
 
             /* accept4() if no surpose */
@@ -97,9 +99,8 @@ void CSocket::EpollEventAcceptHandler(LPCONNECTION_T pOldConn)
             }
             else
             {
-                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "accept new connection failed, We didn't check this error");
+                CLog::Log(LOG_LEVEL_ERR, iErr, __THIS_FILE__, __LINE__, "accept new connection failed, We didn't check this error");
             }
-
             return;
         }/* end if(iSockFd == -1) */
 

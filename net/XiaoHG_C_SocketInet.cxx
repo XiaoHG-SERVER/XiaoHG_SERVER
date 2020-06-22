@@ -21,6 +21,8 @@
 #include "XiaoHG_Global.h"
 #include "XiaoHG_Func.h"
 #include "XiaoHG_C_Socket.h"
+#include "XiaoHG_C_Log.h"
+#include "XiaoHG_error.h"
 
 #define __THIS_FILE__ "XiaoHG_C_SocketInet.cxx"
 

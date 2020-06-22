@@ -23,6 +23,8 @@
 #include "XiaoHG_C_Socket.h"
 #include "XiaoHG_C_Memory.h"
 #include "XiaoHG_C_LockMutex.h"
+#include "XiaoHG_C_Log.h"
+#include "XiaoHG_error.h"
 
 #define __THIS_FILE__ "XiaoHG_C_SocketTime.cxx"
 
@@ -42,12 +44,11 @@ void CSocket::AddToTimerQueue(LPCONNECTION_T pConn)
 	/* function track */
 	CLog::Log(LOG_LEVEL_TRACK, "CSocket::AddToTimerQueue track");
 
-    CMemory *pMemory = CMemory::GetInstance();
     time_t CurrTime = time(NULL);		/* Get Current time */
     CurrTime += m_iWaitTime;			/* 20s after */
 
     CLock lock(&m_TimeQueueMutex); /* lock */
-    LPMSG_HEADER_T pMsgHeader = (LPMSG_HEADER_T)pMemory->AllocMemory(m_iLenMsgHeader, false);
+    LPMSG_HEADER_T pMsgHeader = (LPMSG_HEADER_T)m_pMemory->AllocMemory(m_iLenMsgHeader, false);
     pMsgHeader->pConn = pConn;
     pMsgHeader->uiCurrentSequence = pConn->uiCurrentSequence;
     m_TimerQueueMultiMap.insert(std::make_pair(CurrTime, pMsgHeader)); /* Buttons are automatically sorted small-> large */
@@ -121,7 +122,6 @@ LPMSG_HEADER_T CSocket::GetOverTimeTimer(time_t CurrentTime)
 	/* function track */
 	CLog::Log(LOG_LEVEL_TRACK, "CSocket::GetOverTimeTimer track");
 
-	CMemory *pMemory = CMemory::GetInstance();
 	LPMSG_HEADER_T pOverTimeMsg = NULL;
 
 	if (m_CurrentHeartBeatListSize == 0 || m_TimerQueueMultiMap.empty())
@@ -143,7 +143,7 @@ LPMSG_HEADER_T CSocket::GetOverTimeTimer(time_t CurrentTime)
 			/* Because we still have to judge the time of the pNext timeout, 
 			 * so we need to add this node back */        
 			time_t NewTime = CurrentTime + m_iWaitTime;
-			LPMSG_HEADER_T pMsgHeader = (LPMSG_HEADER_T)pMemory->AllocMemory(sizeof(MSG_HEADER_T), false);
+			LPMSG_HEADER_T pMsgHeader = (LPMSG_HEADER_T)m_pMemory->AllocMemory(sizeof(MSG_HEADER_T), false);
 			pMsgHeader->pConn = pOverTimeMsg->pConn;
 			pMsgHeader->uiCurrentSequence = pOverTimeMsg->uiCurrentSequence;			
 			/* Automatic sorting Small-> Large, add new time */	
@@ -173,7 +173,6 @@ void CSocket::DeleteFromTimerQueue(LPCONNECTION_T pConn)
 	/* function track */
 	CLog::Log(LOG_LEVEL_TRACK, "CSocket::DeleteFromTimerQueue track");
 
-	CMemory *pMemory = CMemory::GetInstance();
     CLock lock(&m_TimeQueueMutex);
 	std::multimap<time_t, LPMSG_HEADER_T>::iterator pos;
 	std::multimap<time_t, LPMSG_HEADER_T>::iterator posEnd;	
@@ -184,7 +183,7 @@ lblMTQM:
 	{
 		if(pos->second->pConn == pConn)
 		{
-			pMemory->FreeMemory(pos->second);
+			m_pMemory->FreeMemory(pos->second);
 			m_TimerQueueMultiMap.erase(pos);
 			--m_CurrentHeartBeatListSize;							
 			goto lblMTQM;
@@ -211,12 +210,11 @@ void CSocket::ClearAllFromTimerQueue()
 	/* function track */
 	CLog::Log(LOG_LEVEL_TRACK, "CSocket::ClearAllFromTimerQueue track");
 
-	CMemory *pMemory = CMemory::GetInstance();	
 	std::multimap<time_t, LPMSG_HEADER_T>::iterator pos = m_TimerQueueMultiMap.begin();
 	std::multimap<time_t, LPMSG_HEADER_T>::iterator posEnd = m_TimerQueueMultiMap.end();
 	for(; pos != posEnd; pos++)	
 	{
-		pMemory->FreeMemory(pos->second);		
+		m_pMemory->FreeMemory(pos->second);		
 		pos->second = NULL;
 		--m_CurrentHeartBeatListSize;
 	}
@@ -245,7 +243,7 @@ void* CSocket::HeartBeatMonitorThreadProc(void* pThreadData)
     while(!g_bIsStopEvent)
     {
 		/* Check every 500ms */
-        usleep(CHECK_HBLIST_TIME * 1000);
+        usleep(CHECK_HBLIST_TIMER * 1000);
 		/* m_CurrentHeartBeatListSize is not null */
 		if(pSocketObj->m_CurrentHeartBeatListSize > 0)	
         {
@@ -297,8 +295,7 @@ void CSocket::HeartBeatTimeOutCheck(LPMSG_HEADER_T pstMsgHeader, time_t CurrentT
 	/* function track */
 	CLog::Log(LOG_LEVEL_TRACK, "CSocket::HeartBeatTimeOutCheck track");
 
-	CMemory *pMemory = CMemory::GetInstance();
-	pMemory->FreeMemory(pstMsgHeader);
+	m_pMemory->FreeMemory(pstMsgHeader);
 }
 
 

@@ -24,6 +24,8 @@
 #include "XiaoHG_C_Socket.h"
 #include "XiaoHG_C_Memory.h"
 #include "XiaoHG_C_LockMutex.h"
+#include "XiaoHG_C_Log.h"
+#include "XiaoHG_error.h"
 
 #define __THIS_FILE__ "XiaoHG_C_SocketRequest.cxx"
 
@@ -51,7 +53,7 @@ void CSocket::EpollEventReadRequestHandler(LPCONNECTION_T pConn)
     ssize_t uiReceiveLen = RecvProc(pConn, pConn->pRecvMsgBuff, pConn->iRecvMsgLen); 
     if(uiReceiveLen <= 0)
     {
-        CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "Client disconnected, socket id: %d", pConn->iSockFd);
+        CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "Client disconnected, socket id: %d", pConn->iSockFd);
         return;
     }
 
@@ -234,7 +236,6 @@ void CSocket::RecvMsgHeaderParseProc(LPCONNECTION_T pConn, bool &bIsFlood)
     pPkgHeader = (LPCOMM_PKG_HEADER)pConn->dataHeadInfo;
     /* Get packet length */
     unsigned short sPkgLen = ntohs(pPkgHeader->sPkgLength);
-    CMemory *pMemory = CMemory::GetInstance();  
 
     /* Malformed packet filtering: judgment of malicious packets or wrong packets */
     if(sPkgLen < m_iLenPkgHeader || sPkgLen > PKG_MAX_LENGTH) 
@@ -246,7 +247,7 @@ void CSocket::RecvMsgHeaderParseProc(LPCONNECTION_T pConn, bool &bIsFlood)
     /* Legal packet header, continue processing */
     else
     {
-        char *pMsgBuffer = (char *)pMemory->AllocMemory(m_iLenMsgHeader + sPkgLen, false); 
+        char *pMsgBuffer = (char *)m_pMemory->AllocMemory(m_iLenMsgHeader + sPkgLen, false); 
         pConn->pRecvMsgMemPointer = pMsgBuffer;
 
         /* a)Fill in the message header first */
@@ -303,8 +304,7 @@ void CSocket::RecvMsgPacketParseProc(LPCONNECTION_T pConn, bool &bIsFlood)
     {
         /* Is flood*/
         /* Directly release the memory without entering the message queue at all */
-        CMemory *pMemory = CMemory::GetInstance();
-        pMemory->FreeMemory(pConn->pRecvMsgMemPointer); 
+        m_pMemory->FreeMemory(pConn->pRecvMsgMemPointer); 
     }
     pConn->iRecvCurrentStatus = PKG_HD_INIT;   /* Init */                  
     pConn->pRecvMsgBuff = pConn->dataHeadInfo; /* Init */
@@ -386,7 +386,6 @@ void CSocket::EpollEventWriteRequestHandler(LPCONNECTION_T pConn)
     /* function track */
     CLog::Log(LOG_LEVEL_TRACK, "CSocket::EpollEventWriteRequestHandler track");
 
-    CMemory *pMemory = CMemory::GetInstance();
     /* send message */
     ssize_t uiSendSize = SendProc(pConn, pConn->pSendMsgBuff, pConn->iSendMsgLen);
     if(uiSendSize > 0 && uiSendSize != pConn->iSendMsgLen)
@@ -422,7 +421,7 @@ void CSocket::EpollEventWriteRequestHandler(LPCONNECTION_T pConn)
         }
         else
         {
-            pMemory->FreeMemory(pConn->pSendMsgMemPointer);
+            m_pMemory->FreeMemory(pConn->pSendMsgMemPointer);
             --pConn->iThrowSendCount;
         }
     }

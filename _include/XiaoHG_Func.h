@@ -7,20 +7,15 @@
 #ifndef __XiaoHG_FUNC_H__
 #define __XiaoHG_FUNC_H__
 
+#include <signal.h>
+
 /* Remove spaces before and after the string */
 void Rtrim(char *string);
 void Ltrim(char *string);
 
-/* Process header LogicHandlerCallBack */
-void XiaoHG_Init(int argc, char *argv[]);
-void InitSetProcTitle();
-int SetProcTitle(const char *title);
-
-/* Signal */
-int InitSignals();
 void MasterProcessCycle();
-int DaemonInit();
 void ProcessEventsAndTimers();
+void SignalHandler(int iSigNo, siginfo_t *pSigInfo, void *pContext);
 
 /* Recyclc */
 void ProcessExitFreeResource();

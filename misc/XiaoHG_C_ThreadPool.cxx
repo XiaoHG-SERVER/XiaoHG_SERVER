@@ -11,6 +11,9 @@
 #include "XiaoHG_C_ThreadPool.h"
 #include "XiaoHG_C_Memory.h"
 #include "XiaoHG_Macro.h"
+#include "XiaoHG_C_Conf.h"
+#include "XiaoHG_C_Log.h"
+#include "XiaoHG_error.h"
 
 #define __THIS_FILE__ "XiaoHG_C_ThreadPool.cxx"
 
@@ -18,7 +21,9 @@ pthread_mutex_t CThreadPool::m_pThreadMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t CThreadPool::m_pThreadCond = PTHREAD_COND_INITIALIZER;
 
 /* The thread that just started marking the entire thread pool is not exiting */
-bool CThreadPool::m_Shutdown = false;      
+bool CThreadPool::m_Shutdown = false;
+
+CMemory* CThreadPool::m_pMemory = CMemory::GetInstance();
 
 CThreadPool::CThreadPool()
 {
@@ -46,12 +51,11 @@ void CThreadPool::ClearMsgRecvQueue()
     CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::ClearMsgRecvQueue track");
 
 	char *pTmpMempoint = NULL;
-	CMemory *pMemory = CMemory::GetInstance();
 	while(!m_MsgRecvQueue.empty())
 	{
 		pTmpMempoint = m_MsgRecvQueue.front();		
 		m_MsgRecvQueue.pop_front(); 
-		pMemory->FreeMemory(pTmpMempoint);
+		m_pMemory->FreeMemory(pTmpMempoint);
 	}
 }
 
@@ -63,14 +67,16 @@ void CThreadPool::ClearMsgRecvQueue()
  * discription: create thread pool
  * parameter:
  * =================================================================*/
-int CThreadPool::Create(int iThreadCount)
+int CThreadPool::Init()
 {
     /* function track */
-    CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::Create track");
+    CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::Init track");
 
     ThreadItem *pNewThreadItem = NULL;
+
+    /* get the recv msg thread numbers from config file */
     /* create thread numbers */
-    for(int i = 0; i < iThreadCount; i++)
+    for(int i = 0; i < CConfig::GetInstance()->GetIntDefault("ProcMsgRecvWorkThreadCount", 5); i++)
     {
         pNewThreadItem = new ThreadItem(this);
         m_ThreadPoolVector.push_back(pNewThreadItem);
@@ -110,7 +116,6 @@ void* CThreadPool::ThreadFunc(void *pThreadData)
     /* function track */
     CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::ThreadFunc track");
 
-    CMemory *pMemory = CMemory::GetInstance();
     /* This is a static member function, there is no this pointer */
     ThreadItem *pThread = static_cast<ThreadItem *>(pThreadData);
     CThreadPool *pThreadPoolObj = pThread->_pThis;
@@ -183,7 +188,7 @@ void* CThreadPool::ThreadFunc(void *pThreadData)
         /* handle massage */
         ++pThreadPoolObj->m_iRunningThreadCount;
         g_LogicSocket.RecvMsgHandleThreadProc(pJobBuf);
-        pMemory->FreeMemory(pJobBuf);   /* handle over, free memory */ 
+        m_pMemory->FreeMemory(pJobBuf);   /* handle over, free memory */ 
         --pThreadPoolObj->m_iRunningThreadCount;
 
     } /* end while(true) */
