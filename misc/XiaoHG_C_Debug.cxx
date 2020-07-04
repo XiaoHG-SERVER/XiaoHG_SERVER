@@ -5,7 +5,6 @@
  */
 
 #include "XiaoHG_C_Socket.h"
-#include "XiaoHG_Func.h"
 #include "XiaoHG_Macro.h"
 #include "XiaoHG_C_ThreadPool.h"
 #include "XiaoHG_Global.h"
@@ -31,7 +30,7 @@ void CSocket::PrintTDInfo()
     if((CurrTime - m_LastPrintTime) >= 9)
     {
         /* recv list */
-        int tmprmqc = g_ThreadPool.getRecvMsgQueueCount(); 
+        int tmprmqc = g_ThreadPool.GetRecvMsgQueueCount(); 
         m_LastPrintTime = CurrTime;
         int tmpoLUC = m_OnLineUserCount;    /* Atomic transfer, print atomic type error directly */
         int tmpsmqc = m_iSendMsgQueueCount; /* Atomic transfer, print atomic type error directly */

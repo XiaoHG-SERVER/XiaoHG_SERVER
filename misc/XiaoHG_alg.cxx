@@ -8,7 +8,6 @@
 #include <string.h>
 #include "XiaoHG_alg.h"
 #include "XiaoHG_Macro.h"
-#include "XiaoHG_Func.h"
 #include "XiaoHG_Global.h"
 
 #define __THIS_FILE__ "XiaoHG_String.cxx"

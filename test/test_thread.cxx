@@ -24,30 +24,30 @@ void *RecvMsgThreadProc(void *pThreadData)
 {
     printf("[%s: %d]RecvMsgThreadProc() 接收数据线程启动\n", __FILE__, __LINE__);
 
-    int iErr = 0;
+    int errNo = 0;
     int iRecvLen = MAX_RECVMSG_LENGTH;
     char *pRecvBuf = (char *)malloc(iRecvLen * sizeof(char));
     memset(pRecvBuf, 0, iRecvLen);
 
     while (true)
     {
-        iErr = RecvData(pRecvBuf, iRecvLen);
-        if(iErr == -1)
+        errNo = RecvData(pRecvBuf, iRecvLen);
+        if(errNo == -1)
         {
             printf("[%s: %d]RecvMsgThreadProc()/recv_data() 数据接收失败, errno = %d\n", __FILE__, __LINE__, errno);
             break;
         }
 
-        if (iErr == 0)
+        if (errNo == 0)
         {
             printf("[%s: %d]RecvMsgThreadProc()/recv_data() 服务器断开\n", __FILE__, __LINE__);
             break;
         }
 
         LPCOMM_PKG_HEADER pPkgHeader = (LPCOMM_PKG_HEADER)pRecvBuf;
-        unsigned short sMsgCode = htons(pPkgHeader->usMsgCode);
+        uint16_t MsgCode = htons(pPkgHeader->usMsgCode);
 
-        switch (sMsgCode)
+        switch (MsgCode)
         {
         case HB_CODE:
             printf("[%s: %d]RecvMsgThreadProc() 收到一个心跳回复\n", __FILE__, __LINE__);
@@ -75,7 +75,7 @@ void *HeartBeatThreadProc(void *pThreadData)
     printf("[%s: %d]SendMsgThreadProc() 心跳检测线程启动\n", __FILE__, __LINE__);
     while(true)
     {
-        usleep(20000 * 1000);
+        usleep(random() % 2000 * 5000);
         if(SendHeartBeatMsg() == -1)
         {
             printf("[%s: %d]HeartbeatThreadProc()/SendHeartBeatMsg() failed, errno: %d!\n", __FILE__, __LINE__, errno);

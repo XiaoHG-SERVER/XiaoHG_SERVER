@@ -29,7 +29,7 @@ int SendHeartBeatMsg()
 	pInfoHead->iCrc32 = htons(pInfoHead->iCrc32);
 	pInfoHead->usMsgCode = HB_CODE;
 	pInfoHead->usMsgCode = htons(pInfoHead->usMsgCode);
-	pInfoHead->usPkgLen = htons(g_iLenPkgHeader);
+	pInfoHead->uPkgLen = htons(g_iLenPkgHeader);
 
 	if (SendData(pSendBuf, g_iLenPkgHeader) == -1)
 	{
@@ -54,7 +54,7 @@ int SendRegisterMsg()
 	pInfoHead = (LPCOMM_PKG_HEADER)pSendBuf;
 	pInfoHead->usMsgCode = REGISTER_CODE;
 	pInfoHead->usMsgCode = htons(pInfoHead->usMsgCode);
-	pInfoHead->usPkgLen = htons(g_iLenPkgHeader + sizeof(STRUCT_REGISTER));
+	pInfoHead->uPkgLen = htons(g_iLenPkgHeader + sizeof(STRUCT_REGISTER));
 
 	LPSTRUCT_REGISTER pstSendRegister = (LPSTRUCT_REGISTER)(pSendBuf + g_iLenPkgHeader);
 	pstSendRegister->iType = htonl(100);
@@ -87,7 +87,7 @@ int SendLoginMsg()
 	pInfoHead = (LPCOMM_PKG_HEADER)pSendBuf;
 	pInfoHead->usMsgCode = LINGIN_CODE;  
 	pInfoHead->usMsgCode = htons(pInfoHead->usMsgCode);
-	pInfoHead->usPkgLen = htons(g_iLenPkgHeader + sizeof(STRUCT_LOGIN));
+	pInfoHead->uPkgLen = htons(g_iLenPkgHeader + sizeof(STRUCT_LOGIN));
 
 	LPSTRUCT_LOGIN pstSendLogin = (LPSTRUCT_LOGIN)(pSendBuf + g_iLenPkgHeader);
 	strcpy(pstSendLogin->UserName, "XiaoHG_Login");

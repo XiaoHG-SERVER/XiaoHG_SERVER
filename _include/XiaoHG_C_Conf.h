@@ -30,10 +30,10 @@ private:
 public:	
 	static CConfig* GetInstance()
 	{
-		if(m_Instance == NULL)
+		if(m_Instance == nullptr)
 		{
 			/* lock */
-			if(m_Instance == NULL)
+			if(m_Instance == nullptr)
 			{					
 				m_Instance = new CConfig();
 				static CDeleteInstance cTmp; 
@@ -51,16 +51,16 @@ public:
 			if (CConfig::m_Instance)
 			{						
 				delete CConfig::m_Instance;
-				CConfig::m_Instance = NULL;
+				CConfig::m_Instance = nullptr;
 			}
 		}
 	};
 	
 private:
-	int Initialization();
+	int Init();
 
 public:
-	const char *GetString(const char *pItemName);
+	char *GetString(const char *pItemName);
 	int GetIntDefault(const char *pItemName, const int iDef = 0);
 
 public:

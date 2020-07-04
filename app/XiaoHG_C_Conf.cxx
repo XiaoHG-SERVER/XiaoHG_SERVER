@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
-#include "XiaoHG_Func.h"
 #include "XiaoHG_C_Conf.h"
 #include "XiaoHG_Macro.h"
 #include "XiaoHG_error.h"
@@ -21,7 +20,7 @@ CConfig *CConfig::m_Instance = NULL;
 
 CConfig::CConfig()
 {
-    Initialization();
+    Init();
 }
 CConfig::~CConfig()
 {
@@ -29,10 +28,6 @@ CConfig::~CConfig()
 	{
         if((*iter) != NULL)
         {
-            printf("(*iter) = %p, (*iter)->ItemName = %s, (*iter)->ItemContent = %s\n", (*iter), (*iter)->ItemName, (*iter)->ItemContent);
-
-            /* DTS20200619- 未解决*/
-            /* corresh 需要看这个复位:0x8065fa0 -> 0x08065f00 导致delete的时候复位 */
 		    delete (*iter); 
         }
 	}/* end for */
@@ -47,7 +42,7 @@ CConfig::~CConfig()
  * function name: Load
  * discription: load log file.
  * =================================================================*/
-int CConfig::Initialization()
+int CConfig::Init()
 {
     /* max item 500b */
     char LineBuf[501] = { 0 };
@@ -102,8 +97,6 @@ int CConfig::Initialization()
 
             m_ConfigItemList.push_back(pConfitem);
 
-            printf("pConfitem = %p, pConfitem->ItemName = %s, pConfitem->ItemContent = %s\n",pConfitem, pConfitem->ItemName, pConfitem->ItemContent);
-
         } /* end if */
     } /* end while(!feof(fp)) */ 
     fclose(fp);
@@ -117,12 +110,12 @@ int CConfig::Initialization()
  * function name: GetString
  * discription: get config from item name
  * =================================================================*/
-const char* CConfig::GetString(const char *pItemName)
+char* CConfig::GetString(const char *pItemName)
 {
 	std::vector<LPCONF_ITEM>::iterator pos;	
 	for(pos = m_ConfigItemList.begin(); pos != m_ConfigItemList.end(); ++pos)
 	{
-		if(strcasecmp( (*pos)->ItemName, pItemName) == 0)
+		if(strcasecmp((*pos)->ItemName, pItemName) == 0)
 			return (*pos)->ItemContent;
 	}/* end for */
 	return NULL;
@@ -138,7 +131,7 @@ const char* CConfig::GetString(const char *pItemName)
  * =================================================================*/
 int CConfig::GetIntDefault(const char *pItemName, const int def)
 {
-	std::vector<LPCONF_ITEM>::iterator pos;	
+	std::vector<LPCONF_ITEM>::iterator pos;
 	for(pos = m_ConfigItemList.begin(); pos != m_ConfigItemList.end(); ++pos)
 	{
 		if(strcasecmp((*pos)->ItemName, pItemName) == 0)

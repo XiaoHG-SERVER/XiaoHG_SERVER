@@ -9,17 +9,48 @@
 #include <signal.h>
 #include <map>
 
-class CMainArgCtl;
 class CSignalCtl;
+class CConfig;
 
 #ifndef __XiaoHG_C_RUNINIT_H__
 #define __XiaoHG_C_RUNINIT_H__
 
 class CRun
 {
-public:
+private:
     CRun();
+
+public:
     ~CRun();
+
+private:
+    static CRun *m_Instance;
+/* Singleton implementation */
+public:
+    static CRun* GetInstance()
+    {
+        if (m_Instance == NULL)
+        {
+            if (m_Instance == NULL)
+            {
+                m_Instance = new CRun();
+                static CDeleteInstance ci;
+            }
+        }
+        return m_Instance;
+    }
+    class CDeleteInstance
+    {
+    public:
+        ~CDeleteInstance()
+        {
+            if (CRun::m_Instance != NULL)
+            {
+                delete CRun::m_Instance;
+                CRun::m_Instance = NULL;
+            }
+        }
+    };
 
 private:
     void Init();
@@ -28,10 +59,7 @@ public:
     void Runing(int argc, char *argv[]);
 
 private:
-    uint32_t DaemonInit();
-
-private:
-    CMainArgCtl* m_pMainArgCtl;
+    static CConfig* m_pConfig;
     CSignalCtl* m_pSignalCtl;
 };
 

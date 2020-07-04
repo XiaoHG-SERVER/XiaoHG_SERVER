@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "XiaoHG_C_Crc32.h"
+#include "XiaoHG_C_Log.h"
 
 #define __THIS_FILE__ "XiaoHG_C_Crc32.cxx"
 

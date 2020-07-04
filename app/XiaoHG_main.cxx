@@ -4,25 +4,24 @@
  * Copyright(c) XiaoHG_SERVER
  */
 
-#include "XiaoHG_Func.h"
 #include "XiaoHG_C_MainArgCtl.h"
-#include "XiaoHG_C_RunInit.h"
-#include "XiaoHG_C_SLogic.h"
+#include "XiaoHG_C_Socket.h"
 #include "XiaoHG_C_ThreadPool.h"
+#include "XiaoHG_C_BusinessCtl.h"
+#include "XiaoHG_C_MessageCtl.h"
+#include "XiaoHG_C_MainArgCtl.h"
+#include "XiaoHG_C_ProcessCtl.h"
+#include "XiaoHG_C_RunInit.h"
 
 #define __THIS_FILE__ "XiaoHG_main.cxx"
 
-CMainArgCtl g_MainArgCtl;
+class CRun;
 
-/* socket/thread pool */
-CLogicSocket g_LogicSocket;          /* socket obj */
-CThreadPool g_ThreadPool;       /* thread pool objs */
-
-/* about process ID */
-pid_t g_iCurPid;        /* current pid */
-pid_t g_iParentPid;     /* parent pid */
-int g_iProcessID;       /* process id, made myself */
-bool g_bIsStopEvent;    /* process exit(1) or 0 */
+CSocket g_Socket;
+CThreadPool g_ThreadPool;
+CBusinessCtl g_BusinessCtl;
+CMessageCtl g_MessageCtl;
+CProcessCtl g_ProcessCtl;
 
 /* =================================================================
  * auth: XiaoHG
@@ -32,7 +31,7 @@ bool g_bIsStopEvent;    /* process exit(1) or 0 */
  * =================================================================*/
 int main(int argc, char *argv[])
 {
-    CRun* run = new CRun();
+    CRun* run = CRun::GetInstance();
     run->Runing(argc, argv);
 }
 

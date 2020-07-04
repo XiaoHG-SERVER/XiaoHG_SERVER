@@ -9,9 +9,6 @@
 #include <string.h>
 #include <errno.h>
 #include "XiaoHG_C_Memory.h"
-#include "XiaoHG_Func.h"
-#include "XiaoHG_Macro.h"
-#include "XiaoHG_Global.h"
 #include "XiaoHG_C_Log.h"
 
 #define __THIS_FILE__ "XiaoHG_C_Memory.cxx"
@@ -28,7 +25,6 @@ CMemory *CMemory::m_Instance = NULL;
  * =================================================================*/
 void* CMemory::AllocMemory(int iMemCount, bool bIsMemSet)
 {
-
 	void *pTmpData = (void *)new char[iMemCount];
     if(pTmpData == NULL)
     {
@@ -54,11 +50,10 @@ void* CMemory::AllocMemory(int iMemCount, bool bIsMemSet)
  * =================================================================*/
 void CMemory::FreeMemory(void *p)
 {
-    /* function track */
-    CLog::Log(LOG_LEVEL_TRACK, "CMemory::FreeMemory track");
-
-    CLog::Log("FreeMemory enter, p = %s", p);
-    delete [] ((char *)p);
-    p = NULL;
+    if (p != nullptr)
+    {
+        delete [] ((char *)p);
+        p = NULL;
+    }
 }
 

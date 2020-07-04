@@ -7,21 +7,21 @@
 #ifndef __XiaoHG_GLOBAL_H__
 #define __XiaoHG_GLOBAL_H__
 
-#include <signal.h> 
-#include "XiaoHG_C_SLogic.h"
+#include<semaphore.h>
+#include "XiaoHG_C_Socket.h"
 #include "XiaoHG_C_ThreadPool.h"
-#include "XiaoHG_C_MainArgCtl.h"
+#include "XiaoHG_C_BusinessCtl.h"
+#include "XiaoHG_C_MessageCtl.h"
+#include "XiaoHG_C_ProcessCtl.h"
 
-/* XiaoHG server process exit error code */
-extern int iExitCode;
-
-extern CLogicSocket g_LogicSocket;
+extern CSocket g_Socket;
 extern CThreadPool g_ThreadPool;
-extern CMainArgCtl g_MainArgCtl;
+extern CBusinessCtl g_BusinessCtl;
+extern CMessageCtl g_MessageCtl;
+extern CProcessCtl g_ProcessCtl;
 
-extern pid_t g_iCurPid;
-extern pid_t g_iParentPid;
-extern int g_iProcessID;
-extern bool g_bIsStopEvent;
+extern sem_t g_SendMsgPushEventSem; /* Send Message sem*/
+extern uint32_t g_LenPkgHeader;     /* packet header size */
+extern uint32_t g_LenMsgHeader;     /* Message header size */
 
 #endif //!__XiaoHG_GLOBAL_H__

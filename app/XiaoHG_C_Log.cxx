@@ -52,9 +52,8 @@ pthread_mutex_t CLog::m_LogMutex = PTHREAD_MUTEX_INITIALIZER;
 LOG_T CLog::m_stLog = {-1, LOG_LEVEL_ERR};
 CLog *CLog::m_Instance = NULL;
 char *CLog::m_pLogBuff = NULL;
-int CLog::m_iLogStrPoint = 0;
-int CLog::m_iLogStrLen = 0;
-CConfig* CLog::m_pConfig = CConfig::GetInstance();
+uint16_t CLog::m_LogStrPoint = 0;
+uint16_t CLog::m_LogStrLen = 0;
 
 CLog::CLog()
 {
@@ -64,10 +63,10 @@ CLog::CLog()
 CLog::~CLog()
 {
     /* close log file */
-    if(m_stLog.iLogFd != -1)  
+    if(m_stLog.logFd != -1)  
     {
-        close(m_stLog.iLogFd);
-        m_stLog.iLogFd = -1;
+        close(m_stLog.logFd);
+        m_stLog.logFd = -1;
     }
     if (m_pLogBuff != NULL)
     {
@@ -77,7 +76,7 @@ CLog::~CLog()
     pthread_mutex_destroy(&m_LogMutex);
 }
 
-int CLog::Init()
+void CLog::Init()
 {
     /* Alloc memory for log buffer */
     m_pLogBuff = new char[MAX_LOG_STRLEN];
@@ -85,13 +84,10 @@ int CLog::Init()
     /* Init the log mutex  */
     if(pthread_mutex_init(&m_LogMutex, NULL) != 0)
     {
-        return XiaoHG_ERROR;
+        exit(0);
     }
-
-    SetLogLevel(m_pConfig->GetIntDefault("LogLevel", LOG_LEVEL_ERR));
-    SetLogFile(m_pConfig->GetString("Log"));
-
-    return XiaoHG_SUCCESS;
+    SetLogLevel(CConfig::GetInstance()->GetIntDefault("LogLevel", LOG_LEVEL_ERR));
+    SetLogFile(CConfig::GetInstance()->GetString("Log"));
 }
 
 int CLog::SetLogFile(const char *pLogFile)
@@ -100,8 +96,8 @@ int CLog::SetLogFile(const char *pLogFile)
     {
         pLogFile = DEFAULT_LOG_PATH;
     }
-    m_stLog.iLogFd = open(pLogFile, O_WRONLY|O_APPEND|O_CREAT, 0644);  
-    if (m_stLog.iLogFd == -1)
+    m_stLog.logFd = open(pLogFile, O_WRONLY|O_APPEND|O_CREAT, 0644);  
+    if (m_stLog.logFd == -1)
     {
         return XiaoHG_ERROR;
     }
@@ -109,32 +105,31 @@ int CLog::SetLogFile(const char *pLogFile)
     return XiaoHG_SUCCESS;
 }
 
-void CLog::SetLogLevel(int iLevel)
+void CLog::SetLogLevel(int logLevel)
 {
-    m_stLog.iLogLevel = iLevel;
-    return;
+    m_stLog.logLevel = logLevel;
 }
 
 //(such as)2020/04/09 20:32:40 [alert] [pid: 30112] [errno: 98, Address already in use] [XiaoHG]: ProcessGetStatus() pid = 30113 exited on signal 11!
-bool CLog::LogBasicStr(int iLevel = LOG_LEVEL_TRACK)
+bool CLog::LogBasicStr(int logLevel = LOG_LEVEL_TRACK)
 {
     char pStrLogInfo[BASIC_LOG_STRLEN] = { 0 };
     struct tm stTM = { 0 };
     time_t time_seconds = time(0);
 
-    /* Initialization */
+    /* Init */
     memset(m_pLogBuff, 0, MAX_LOG_STRLEN);
-    m_iLogStrLen = 0;
-    m_iLogStrPoint = 0;
+    m_LogStrLen = 0;
+    m_LogStrPoint = 0;
     
     /* Check log file id is value */
-    if (m_stLog.iLogFd == -1)
+    if (m_stLog.logFd == -1)
     {
         return false;
     }
 
     /* Log level control */
-    if (iLevel > m_stLog.iLogLevel)
+    if (logLevel > m_stLog.logLevel)
     {
         return false;
     }
@@ -145,12 +140,12 @@ bool CLog::LogBasicStr(int iLevel = LOG_LEVEL_TRACK)
      * thread-safe version, try to use 
      * */
     localtime_r(&time_seconds, &stTM);
-    m_iLogStrPoint = snprintf(m_pLogBuff + m_iLogStrLen, BASIC_LOG_STRLEN, 
+    m_LogStrPoint = snprintf(m_pLogBuff + m_LogStrLen, BASIC_LOG_STRLEN, 
                             "%4d/%02d/%02d %02d:%02d:%02d [XiaoHG][pid:%d]", 
                             stTM.tm_year + 1900, stTM.tm_mon + 1,
                             stTM.tm_mday, stTM.tm_hour,
                             stTM.tm_min, stTM.tm_sec, getpid());
-    m_iLogStrLen += m_iLogStrPoint;
+    m_LogStrLen += m_LogStrPoint;
 
     return true;
 }
@@ -166,8 +161,8 @@ void CLog::Log(const char *fmt, ...)
         return;
     }
     
-    m_iLogStrPoint = snprintf(m_pLogBuff + m_iLogStrLen, BASIC_LOG_STRLEN - m_iLogStrLen, "[std] ");
-    m_iLogStrLen += m_iLogStrPoint;
+    m_LogStrPoint = snprintf(m_pLogBuff + m_LogStrLen, BASIC_LOG_STRLEN - m_LogStrLen, "[std] ");
+    m_LogStrLen += m_LogStrPoint;
     
     va_list stArgs;
     va_start(stArgs, fmt);
@@ -178,19 +173,19 @@ void CLog::Log(const char *fmt, ...)
     return;
 }
 
-void CLog::Log(int iLevel, const char *fmt, ...)
+void CLog::Log(int logLevel, const char *fmt, ...)
 {
     /* m_LogMutex lock */
     CLock lock(&m_LogMutex);
 
     /* first print log basic string */
-    if (!LogBasicStr(iLevel))
+    if (!LogBasicStr(logLevel))
     {
         return;
     }
 
-    m_iLogStrPoint = snprintf(m_pLogBuff + m_iLogStrLen, BASIC_LOG_STRLEN - m_iLogStrLen, "[%s] ", g_ErrLevel[iLevel]);
-    m_iLogStrLen += m_iLogStrPoint;
+    m_LogStrPoint = snprintf(m_pLogBuff + m_LogStrLen, BASIC_LOG_STRLEN - m_LogStrLen, "[%s] ", g_ErrLevel[logLevel]);
+    m_LogStrLen += m_LogStrPoint;
     
     va_list stArgs;
     va_start(stArgs, fmt);
@@ -201,20 +196,20 @@ void CLog::Log(int iLevel, const char *fmt, ...)
     return;
 }
 
-void CLog::Log(int iLevel, int iErrno, const char *fmt, ...)
+void CLog::Log(int logLevel, int errNo, const char *fmt, ...)
 {
     /* m_LogMutex lock */
     CLock lock(&m_LogMutex);
     
     /* first print log basic string */
-    if (!LogBasicStr(iLevel))
+    if (!LogBasicStr(logLevel))
     {
         return;
     }
 
-    m_iLogStrPoint = snprintf(m_pLogBuff + m_iLogStrLen, BASIC_LOG_STRLEN - m_iLogStrLen, "[%s][errno:%d, %s] ",
-                                                                    g_ErrLevel[iLevel], iErrno, strerror(iErrno));
-    m_iLogStrLen += m_iLogStrPoint;
+    m_LogStrPoint = snprintf(m_pLogBuff + m_LogStrLen, BASIC_LOG_STRLEN - m_LogStrLen, "[%s][errno:%d, %s] ",
+                                                                    g_ErrLevel[logLevel], errNo, strerror(errNo));
+    m_LogStrLen += m_LogStrPoint;
     
     va_list stArgs;
     va_start(stArgs, fmt);
@@ -225,20 +220,20 @@ void CLog::Log(int iLevel, int iErrno, const char *fmt, ...)
     return;
 }
 
-void CLog::Log(int iLevel, const char *pFileName, int iLine, const char *fmt, ...)
+void CLog::Log(int logLevel, const char *pFileName, int lineNo, const char *fmt, ...)
 {
     /* m_LogMutex lock */
     CLock lock(&m_LogMutex);
 
     /* first print log basic string */
-    if (!LogBasicStr(iLevel))
+    if (!LogBasicStr(logLevel))
     {
         return;
     }
 
-    m_iLogStrPoint = snprintf(m_pLogBuff + m_iLogStrLen, BASIC_LOG_STRLEN - m_iLogStrLen, "[%s][%s: %d] ",
-                                                                        g_ErrLevel[iLevel], pFileName, iLine);
-    m_iLogStrLen += m_iLogStrPoint;
+    m_LogStrPoint = snprintf(m_pLogBuff + m_LogStrLen, BASIC_LOG_STRLEN - m_LogStrLen, "[%s][%s: %d] ",
+                                                                        g_ErrLevel[logLevel], pFileName, lineNo);
+    m_LogStrLen += m_LogStrPoint;
     
     va_list stArgs;
     va_start(stArgs, fmt);
@@ -249,20 +244,20 @@ void CLog::Log(int iLevel, const char *pFileName, int iLine, const char *fmt, ..
     return;
 }
 
-void CLog::Log(int iLevel, int iErrno, const char *pFileName, int iLine, const char *fmt, ...)
+void CLog::Log(int logLevel, int errNo, const char *pFileName, int lineNo, const char *fmt, ...)
 {
     /* m_LogMutex lock */
     CLock lock(&m_LogMutex);
 
     /* first print log basic string */
-    if (!LogBasicStr(iLevel))
+    if (!LogBasicStr(logLevel))
     {
         return;
     }
 
-    m_iLogStrPoint = snprintf(m_pLogBuff + m_iLogStrLen, BASIC_LOG_STRLEN - m_iLogStrLen, "[%s][%s: %d][errno:%d, %s] ",
-                                                            g_ErrLevel[iLevel], pFileName, iLine, iErrno, strerror(iErrno));
-    m_iLogStrLen += m_iLogStrPoint;
+    m_LogStrPoint = snprintf(m_pLogBuff + m_LogStrLen, BASIC_LOG_STRLEN - m_LogStrLen, "[%s][%s: %d][errno:%d, %s] ",
+                                                            g_ErrLevel[logLevel], pFileName, lineNo, errNo, strerror(errNo));
+    m_LogStrLen += m_LogStrPoint;
 
     va_list stArgs;
     va_start(stArgs, fmt);
@@ -273,20 +268,20 @@ void CLog::Log(int iLevel, int iErrno, const char *pFileName, int iLine, const c
     return;
 }
 
-void CLog::WriteLog(const char* &fmt, va_list &stArgs, int iStdFlag)
+void CLog::WriteLog(const char* &fmt, va_list &stArgs, int stdFlag)
 {
     /* Log to file */
-	m_iLogStrPoint = vsnprintf(m_pLogBuff + m_iLogStrLen, MAX_LOG_STRLEN - m_iLogStrLen, fmt, stArgs);
-    m_iLogStrLen += m_iLogStrPoint;
+	m_LogStrPoint = vsnprintf(m_pLogBuff + m_LogStrLen, MAX_LOG_STRLEN - m_LogStrLen, fmt, stArgs);
+    m_LogStrLen += m_LogStrPoint;
     *(m_pLogBuff + strlen(m_pLogBuff)) = '\n';
     
-    switch (iStdFlag)
+    switch (stdFlag)
     {
     case STDERR_FILENO:
-        write(STDERR_FILENO, m_pLogBuff, m_iLogStrLen + 1);
+        write(STDERR_FILENO, m_pLogBuff, m_LogStrLen + 1);
         break;
     default:
-        write(m_stLog.iLogFd, m_pLogBuff, m_iLogStrLen + 1);
+        write(m_stLog.logFd, m_pLogBuff, m_LogStrLen + 1);
         break;
     }
 

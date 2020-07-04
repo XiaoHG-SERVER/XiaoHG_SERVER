@@ -18,8 +18,8 @@ enum{
 
 typedef struct _COMM_PKG_HEADER
 {
-	unsigned short usPkgLen;
-	unsigned short usMsgCode;
+	uint16_t uPkgLen;
+	uint16_t usMsgCode;
 	int iCrc32;
 }COMM_PKG_HEADER, *LPCOMM_PKG_HEADER;
 

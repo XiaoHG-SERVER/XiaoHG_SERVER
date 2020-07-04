@@ -22,13 +22,11 @@ int SocketInit()
 		printf("[%s: %d]socket() failed!\n", __FILE__, __LINE__);
 		return -1;
 	}
-
 	struct sockaddr_in server_in;
 	memset(&server_in, 0, sizeof(sockaddr_in));
 	server_in.sin_family = AF_INET;
 	server_in.sin_port = htons(80);
 	server_in.sin_addr.s_addr = inet_addr("192.168.13.132");
-
 	if (connect(g_iSocketFd, (struct sockaddr *)&server_in, sizeof(sockaddr_in)) == -1)
 	{
 		printf("[%s: %d]connect() failed! errno = %d\n", __FILE__, __LINE__, errno);

@@ -6,28 +6,27 @@
 
 #include <stdarg.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+#include <errno.h>
 #include "XiaoHG_Global.h"
-#include "XiaoHG_Func.h"
 #include "XiaoHG_C_ThreadPool.h"
 #include "XiaoHG_C_Memory.h"
 #include "XiaoHG_Macro.h"
 #include "XiaoHG_C_Conf.h"
 #include "XiaoHG_C_Log.h"
 #include "XiaoHG_error.h"
+#include "XiaoHG_C_Conf.h"
+#include "XiaoHG_C_MessageCtl.h"
 
 #define __THIS_FILE__ "XiaoHG_C_ThreadPool.cxx"
 
 pthread_mutex_t CThreadPool::m_pThreadMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t CThreadPool::m_pThreadCond = PTHREAD_COND_INITIALIZER;
-
-/* The thread that just started marking the entire thread pool is not exiting */
-bool CThreadPool::m_Shutdown = false;
-
-CMemory* CThreadPool::m_pMemory = CMemory::GetInstance();
+CConfig* CThreadPool::m_pConfig = CConfig::GetInstance();
 
 CThreadPool::CThreadPool()
 {
-    m_iRunningThreadCount = 0;
+    m_RunningThreadCount = 0;
     m_LastAlartNotEnoughThreadTime = 0;
     m_iRecvMsgQueueCount = 0;
 }
@@ -37,27 +36,6 @@ CThreadPool::~CThreadPool()
     ClearMsgRecvQueue();
 }
 
-/* =================================================================
- * auth: XiaoHG
- * date: 2020.04.23
- * test time: 2020.04.23
- * function name: ClearMsgRecvQueue
- * discription: cClean up the receive message queue
- * parameter:
- * =================================================================*/
-void CThreadPool::ClearMsgRecvQueue()
-{
-    /* function track */
-    CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::ClearMsgRecvQueue track");
-
-	char *pTmpMempoint = NULL;
-	while(!m_MsgRecvQueue.empty())
-	{
-		pTmpMempoint = m_MsgRecvQueue.front();		
-		m_MsgRecvQueue.pop_front(); 
-		m_pMemory->FreeMemory(pTmpMempoint);
-	}
-}
 
 /* =================================================================
  * auth: XiaoHG
@@ -67,23 +45,22 @@ void CThreadPool::ClearMsgRecvQueue()
  * discription: create thread pool
  * parameter:
  * =================================================================*/
-int CThreadPool::Init()
+void CThreadPool::Init()
 {
     /* function track */
     CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::Init track");
 
     ThreadItem *pNewThreadItem = NULL;
-
     /* get the recv msg thread numbers from config file */
     /* create thread numbers */
-    for(int i = 0; i < CConfig::GetInstance()->GetIntDefault("ProcMsgRecvWorkThreadCount", 5); i++)
+    for(int i = 0; i < m_pConfig->GetIntDefault("ProcMsgRecvWorkThreadCount", 5); i++)
     {
         pNewThreadItem = new ThreadItem(this);
         m_ThreadPoolVector.push_back(pNewThreadItem);
         if(pthread_create(&pNewThreadItem->_Handle, NULL, ThreadFunc, pNewThreadItem) != 0)
         {
             CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "Create thread failed");
-            return XiaoHG_ERROR;
+            exit(0);
         }
     } /* end for */
 
@@ -98,9 +75,27 @@ int CThreadPool::Init()
             usleep(100 * 1000);
         }
     }
-
     CLog::Log("Create thread success");
-    return XiaoHG_SUCCESS;
+}
+
+
+/* =================================================================
+ * auth: XiaoHG
+ * date: 2020.04.23
+ * test time: 2020.04.23
+ * function name: ClearMsgRecvQueue
+ * discription: cClean up the receive message queue
+ * parameter:
+ * =================================================================*/
+void CThreadPool::ClearMsgRecvQueue()
+{
+	char *pTmpMempoint = NULL;
+	while(!m_MsgRecvQueue.empty())
+	{
+		pTmpMempoint = m_MsgRecvQueue.front();		
+		m_MsgRecvQueue.pop_front(); 
+		CMemory::GetInstance()->FreeMemory(pTmpMempoint);
+	}
 }
 
 /* =================================================================
@@ -126,7 +121,7 @@ void* CThreadPool::ThreadFunc(void *pThreadData)
         if(pthread_mutex_lock(&m_pThreadMutex) != 0)
         {
             CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_lock(&m_pThreadMutex) failed");
-            /* break; */
+            exit(0);
         }
         /* The following line of program writing skills are very important. 
          * You must use while while writing because: pthread_cond_wait() is a notable function.
@@ -136,7 +131,7 @@ void* CThreadPool::ThreadFunc(void *pThreadData)
          * two threads to work, then one of the threads cannot get the message, then if you do not 
          * write while, there will be problems, so after being awaken You must use the while again 
          * to get the message and get it before you come down */
-        while ((pThreadPoolObj->m_MsgRecvQueue.size() == 0) && m_Shutdown == false)
+        while ((g_MessageCtl.GetRecvMsgList().size() == 0))
         {
             /* If this pthread_cond_wait is awakened [the premise of the program 
              * execution flow going down after being awakened is to obtain a lock, 
@@ -145,8 +140,8 @@ void* CThreadPool::ThreadFunc(void *pThreadData)
              * If you get an empty, continue to wait () here */
             if(pThread->bIsRunning == false)
             {
-                /* It is marked as true before StopAll () is allowed to be called: 
-                 * The test found that if Create () and StopAll () are called pNext 
+                /* It is marked as true before Clear () is allowed to be called: 
+                 * The test found that if Create () and Clear () are called pNext 
                  * to each other, it will cause thread confusion, so each thread 
                  * must execute here before it is considered to be successful */
                 pThread->bIsRunning = true; 
@@ -157,39 +152,27 @@ void* CThreadPool::ThreadFunc(void *pThreadData)
              * all threads must be stuck waiting here */
             pthread_cond_wait(&m_pThreadCond, &m_pThreadMutex);
         }
-        /* If you can go down, you must get the data in the real message queue or m_Shutdown == true */
-        /* exit code */
-        if(m_Shutdown)
-        {
-            /* thread exit */
-            CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "m_Shutdown = true thread exit");
-            if(pthread_mutex_unlock(&m_pThreadMutex) != 0)
-            {
-                CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_unlock(&m_pThreadMutex) failed");
-                /* break; */
-            }
-            break;
-        }
 
         /* At this point, you can get the message for processing 
          * [there must be a message in the message queue], 
          * note that it is still mutually exclusive, so you can operate the receive data queue */
-        char *pJobBuf = pThreadPoolObj->m_MsgRecvQueue.front();
-        pThreadPoolObj->m_MsgRecvQueue.pop_front();
-        --pThreadPoolObj->m_iRecvMsgQueueCount;
+        char *pJobBuf = g_MessageCtl.GetRecvMsgList().front();
+        LPCOMM_PKG_HEADER pPkgHeader = (LPCOMM_PKG_HEADER)(pJobBuf + g_LenMsgHeader);  /* packet header */
+        g_MessageCtl.GetRecvMsgList().pop_front();
+        --CMessageCtl::m_RecvMsgListSize;
 
         /* m_pThreadMutex unlock */
         if(pthread_mutex_unlock(&m_pThreadMutex) != 0)
         {
             CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_unlock(&m_pThreadMutex) failed");
-            /* break; */
+            exit(0);
         }
 
         /* handle massage */
-        ++pThreadPoolObj->m_iRunningThreadCount;
-        g_LogicSocket.RecvMsgHandleThreadProc(pJobBuf);
-        m_pMemory->FreeMemory(pJobBuf);   /* handle over, free memory */ 
-        --pThreadPoolObj->m_iRunningThreadCount;
+        ++pThreadPoolObj->m_RunningThreadCount;
+        g_MessageCtl.RecvMsgHandleProc(pJobBuf);
+        CMemory::GetInstance()->FreeMemory(pJobBuf);   /* handle over, free memory */ 
+        --pThreadPoolObj->m_RunningThreadCount;
 
     } /* end while(true) */
 
@@ -200,15 +183,15 @@ void* CThreadPool::ThreadFunc(void *pThreadData)
  * auth: XiaoHG
  * date: 2020.04.23
  * test time: 2020.04.23
- * function name: PutMsgRecvQueueAndSignal
+ * function name: PushRecvMsgToRecvListAndCond
  * discription: After receiving a complete message, enter the message 
  *              queue and trigger the thread in the thread pool to process the message.
  * parameter:
  * =================================================================*/
-void CThreadPool::PutMsgRecvQueueAndSignal(char *pRecvMsgBuff)
+void CThreadPool::PushRecvMsgToRecvListAndCond(char *pRecvMsgBuff)
 {
     /* function track */
-    CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::PutMsgRecvQueueAndSignal track");
+    CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::PushRecvMsgToRecvListAndCond track");
 
     /* m_pThreadMutex lock */
     if(pthread_mutex_lock(&m_pThreadMutex) != 0)
@@ -254,7 +237,7 @@ void CThreadPool::CallRecvMsgHandleThread()
     /* If the current worker threads are all busy, the total number of threads in the thread pool 
      * must be reported, which is the same as the current number of working threads,
      * indicating that all threads are busy and the threads are not enough */
-    if(m_iThreadNum == m_iRunningThreadCount) 
+    if(m_iThreadNum == m_RunningThreadCount) 
     {
         /* thread numbers is not enough */
         time_t CurrTime = time(NULL);
@@ -273,21 +256,14 @@ void CThreadPool::CallRecvMsgHandleThread()
  * auth: XiaoHG
  * date: 2020.04.23
  * test time: 2020.04.23
- * function name: StopAll
+ * function name: Clear
  * discription: stop all threads
  * parameter:
  * =================================================================*/
-int CThreadPool::StopAll()
+int CThreadPool::Clear()
 {
     /* function track */
-    CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::StopAll track");
-
-    /* Ensure that the function will not be called repeatedly */
-    if(m_Shutdown == true)
-    {
-        return XiaoHG_SUCCESS;
-    }
-    m_Shutdown = true;
+    CLog::Log(LOG_LEVEL_TRACK, "CThreadPool::Clear track");
 
     /* weakup all threads in pthread_cond_wait function */
     if(pthread_cond_broadcast(&m_pThreadCond) != 0)
@@ -320,4 +296,24 @@ int CThreadPool::StopAll()
     /* this is record some message to help us know more current status */
     CLog::Log(LOG_LEVEL_NOTICE, "All thread pool return successful");
     return XiaoHG_SUCCESS;
+}
+
+uint32_t CThreadPool::GetThreadCount()
+{
+    return m_iThreadNum;
+}
+
+uint32_t CThreadPool::GetRunningThreadCount()
+{
+    return m_RunningThreadCount;
+}
+
+uint32_t CThreadPool::GetLastAlartNotEnoughThreadTime()
+{
+    return m_LastAlartNotEnoughThreadTime;
+}
+
+void CThreadPool::SetLastAlartNotEnoughThreadTime(uint32_t time)
+{
+    m_LastAlartNotEnoughThreadTime = time;
 }

@@ -19,7 +19,6 @@
 #include "XiaoHG_C_Conf.h"
 #include "XiaoHG_Macro.h"
 #include "XiaoHG_Global.h"
-#include "XiaoHG_Func.h"
 #include "XiaoHG_C_Socket.h"
 #include "XiaoHG_C_Memory.h"
 #include "XiaoHG_C_LockMutex.h"
@@ -28,14 +27,14 @@
 
 #define __THIS_FILE__ "XiaoHG_C_SocketConn.cxx"
 
-connection_s::connection_s()
+stConnection::stConnection()
 {		
-    uiCurrentSequence = 0;    
-    pthread_mutex_init(&LogicPorcMutex, NULL);
+    currSequence = 0;
+    pthread_mutex_init(&logicProcessMutex, NULL);
 }
-connection_s::~connection_s()
+stConnection::~stConnection()
 {
-    pthread_mutex_destroy(&LogicPorcMutex);
+    pthread_mutex_destroy(&logicProcessMutex);
 }
 
 /* =================================================================
@@ -43,24 +42,24 @@ connection_s::~connection_s()
  * date: 2020.04.23
  * test time: 2020.04.23
  * function name: GetOneToUse
- * discription: Init pConnection
+ * discription: Init pstConn
  * parameter:
  * =================================================================*/
-void connection_s::GetOneToUse()
+void stConnection::GetOneToUse()
 {
-    ++uiCurrentSequence;                        /* The serial number is increased by 1 during initialization */
-    iSockFd = -1;                             /* in the beging = -1 */
-    iRecvCurrentStatus = PKG_HD_INIT;           /* The packet receiving state is in the initial state, ready to receive the data packet header [state machine] */
+    ++currSequence;                        /* The serial number is increased by 1 during initialization */
+    sockFd = -1;                             /* in the beging = -1 */
+    recvMsgCurStatus = PKG_HD_INIT;           /* The packet receiving state is in the initial state, ready to receive the data packet header [state machine] */
     pRecvMsgBuff = dataHeadInfo;                /* first receive packet header */
-    iRecvMsgLen = sizeof(COMM_PKG_HEADER);      /* receive packet lenght, first receive header = sizeof(COMM_PKG_HEADER) */
+    recvMsgLen = sizeof(COMM_PKG_HEADER);      /* receive packet lenght, first receive header = sizeof(COMM_PKG_HEADER) */
     pRecvMsgMemPointer = NULL;                  /* receive packet point */
-    iThrowSendCount = 0;                        /* Rely on epoll to send data */
+    throwSendMsgCount = 0;                        /* Rely on epoll to send data */
     pSendMsgMemPointer = NULL;                  /* send data point */
-    iEpollEvents = 0;                           /* epoll event, defult = 0 */
-    iLastHeartBeatTime = time(NULL);            /* last time Heartbeat time */
-    uiFloodKickLastTime = 0;                    /* last time receive Flood massage*/
-	iFloodAttackCount = 0;	                    /* Flood times */
-    iSendQueueCount = 0;                        /* send massage list count */
+    epollEvents = 0;                           /* epoll event, defult = 0 */
+    lastHeartBeatTime = time(NULL);            /* last time Heartbeat time */
+    floodAttackLastTime = 0;                    /* last time receive Flood massage*/
+	floodAttackCount = 0;	                    /* Flood times */
+    sendMsgListCount = 0;                        /* send massage list count */
 }
 
 /* =================================================================
@@ -68,90 +67,65 @@ void connection_s::GetOneToUse()
  * date: 2020.04.23
  * test time: 2020.04.23
  * function name: FreeConnection
- * discription: Init back pConnection
+ * discription: Init back pstConn
  * parameter:
  * =================================================================*/
-void connection_s::PutOneToFree()
+void stConnection::PutOneToFree()
 {
     /* function track */
-    CLog::Log(LOG_LEVEL_TRACK, "connection_s::PutOneToFree track");
+    CLog::Log(LOG_LEVEL_TRACK, "stConnection::PutOneToFree track");
 
-    ++uiCurrentSequence;    /* Increase the serial number by 1 */
+    ++currSequence;    /* Increase the serial number by 1 */
     /* free memory */
     /* pRecvMsgMemPointer munber for free */
     if(pRecvMsgMemPointer != NULL)
     {
         CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "PutOneToFree pRecvMsgMemPointer, pRecvMsgMemPointer = %p", pRecvMsgMemPointer);
-        //CMemory::GetInstance()->FreeMemory(pRecvMsgMemPointer);
+        CMemory::GetInstance()->FreeMemory(pRecvMsgMemPointer);
     }
     /* If there is content in the buffer for sending data, 
      * you need to release the memory */
     if(pSendMsgMemPointer != NULL) 
     {
         CLog::Log(LOG_LEVEL_ERR, __THIS_FILE__, __LINE__, "PutOneToFree pSendMsgMemPointer, pSendMsgMemPointer = %p", pSendMsgMemPointer);
-        //CMemory::GetInstance()->FreeMemory(pSendMsgMemPointer);
+        CMemory::GetInstance()->FreeMemory(pSendMsgMemPointer);
     }
 }
 
-/* =================================================================
- * auth: XiaoHG
- * date: 2020.04.23
- * test time: 2020.04.23
- * function name: InitConnectionPool
- * discription: Init pConnection pool
- * parameter:
- * =================================================================*/
-void CSocket::InitConnectionPool()
-{
-    LPCONNECTION_T pConn = NULL;
-    /* Create */
-    for(int i = 0; i < m_EpollCreateConnectCount; i++) 
-    {
-        /* Apply for memory, because the new char is allocated here, the constructor cannot be executed
-         * so we need to call the constructor manually */
-        pConn = (LPCONNECTION_T)m_pMemory->AllocMemory(sizeof(CONNECTION_T), true); 
-        pConn = new(pConn) CONNECTION_T();
-        pConn->GetOneToUse();
-        m_ConnectionList.push_back(pConn);
-        m_FreeConnectionList.push_back(pConn);
-    } /* end for */
-    /* In the begining is some length */
-    m_FreeConnectionCount = m_TotalConnectionCount = m_ConnectionList.size(); 
-}
 
 /* =================================================================
  * auth: XiaoHG
  * date: 2020.04.23
  * test time: 2020.04.23
  * function name: GetConnection
- * discription: get a new pConnection from free pConnection list
+ * discription: get a new pstConn from free pstConn list
  * parameter:
  * =================================================================*/
-LPCONNECTION_T CSocket::GetConnection(int iSockFd)
+LPCONNECTION_T CSocket::GetConnection(int sockFd)
 {
     /* function track */
     CLog::Log(LOG_LEVEL_TRACK, "CSocket::GetConnection track");
 
-    /* lock the pConnection list */
+    /* lock the pstConn list */
     CLock lock(&m_ConnectionMutex);
-    /* have free pConnection or not*/
+    /* have free pstConn or not*/
     if(!m_FreeConnectionList.empty())
     {
         LPCONNECTION_T pConn = m_FreeConnectionList.front();
         m_FreeConnectionList.pop_front();
         pConn->GetOneToUse();
         --m_FreeConnectionCount; 
-        pConn->iSockFd = iSockFd;
+        pConn->sockFd = sockFd;
         return pConn;
     }
 
-    /* this is no more free pConnection for, need to alloc more for use */
+    /* this is no more free pstConn for, need to alloc more for use */
     LPCONNECTION_T pConn = (LPCONNECTION_T)m_pMemory->AllocMemory(sizeof(CONNECTION_T), true);
     pConn = new(pConn) CONNECTION_T();
     pConn->GetOneToUse();
     m_ConnectionList.push_back(pConn);
     ++m_TotalConnectionCount;
-    pConn->iSockFd = iSockFd;
+    pConn->sockFd = sockFd;
     return pConn;
 }
 
@@ -160,8 +134,8 @@ LPCONNECTION_T CSocket::GetConnection(int iSockFd)
  * date: 2020.04.23
  * test time: 2020.04.23
  * function name: FreeConnection
- * discription: Return the pConnection represented by the parameter 
- *              pConn to the pConnection pool.
+ * discription: Return the pstConn represented by the parameter 
+ *              pConn to the pstConn pool.
  * parameter:
  * =================================================================*/
 void CSocket::FreeConnection(LPCONNECTION_T pConn) 
@@ -169,37 +143,35 @@ void CSocket::FreeConnection(LPCONNECTION_T pConn)
     /* function track */
     CLog::Log(LOG_LEVEL_TRACK, "CSocket::FreeConnection track");
 
-    /* lock free pConnection list */
+    /* lock free pstConn list */
     CLock lock(&m_ConnectionMutex);
-    /* free pConnection */
+    /* free pstConn */
     pConn->PutOneToFree();
-    /* push free pConnection list */
+    /* push free pstConn list */
     m_FreeConnectionList.push_back(pConn);
     ++m_FreeConnectionCount;
-    return;
 }
 
 /* =================================================================
  * auth: XiaoHG
  * date: 2020.04.23
  * test time: 2020.04.23
- * function name: PutConnectToRecyQueue
- * discription: Put the pConnection to be recycled into a queue,    
+ * function name: PushConnectToRecyQueue
+ * discription: Put the pstConn to be recycled into a queue,    
  *              and a subsequent special thread will handle the 
- *              recovery of the pConnection in this queue. Some 
+ *              recovery of the pstConn in this queue. Some 
  *              connections, we do not want to release immediately, 
  *              we must release it after a period of time to ensure 
- *              the stability of the server, We put this pConnection 
+ *              the stability of the server, We put this pstConn 
  *              that was released after a certain period of time into 
  *              a queue first.
  * parameter:
  * =================================================================*/
-void CSocket::PutConnectToRecyQueue(LPCONNECTION_T pConn)
+void CSocket::PushConnectToRecyQueue(LPCONNECTION_T pConn)
 {
     /* function track */
-    CLog::Log(LOG_LEVEL_TRACK, "CSocket::PutConnectToRecyQueue track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::PushConnectToRecyQueue track");
 
-    bool bIsFind = false;
     std::list<LPCONNECTION_T>::iterator pos;
     /* lock recy connect queue */
     CLock lock(&m_RecyConnQueueMutex); 
@@ -207,36 +179,29 @@ void CSocket::PutConnectToRecyQueue(LPCONNECTION_T pConn)
     for(pos = m_RecyConnectionList.begin(); pos != m_RecyConnectionList.end(); pos++)
 	{
 		if((*pos) == pConn)
-		{	
-			bIsFind = true;
-			break;
+		{
+            return;
 		}
 	}
-    /* exist */
-    if(bIsFind == true) 
-	{
-        return;
-    }
-    pConn->PutRecyConnQueueTime = time(NULL);              /* record put time */
-    ++pConn->uiCurrentSequence;                 /* CurrSequence change */
+    pConn->putRecyConnQueueTime = time(NULL);              /* record put time */
+    ++pConn->currSequence;                 /* CurrSequence change */
     m_RecyConnectionList.push_back(pConn);      /* push */
-    ++m_TotalRecyConnectionCount;
+    ++m_DelayRecoveryConnectionCount;
     --m_OnLineUserCount;
-    return;
 }
 
 /* =================================================================
  * auth: XiaoHG
  * date: 2020.04.23
  * test time: 2020.04.23
- * function name: ServerRecyConnectionThreadProc
- * discription: Thread to handle delayed pConnection recovery
+ * function name: DelayRecoveryConnectionThread
+ * discription: Thread to handle delayed pstConn recovery
  * parameter:
  * =================================================================*/
-void* CSocket::ServerRecyConnectionThreadProc(void* pThreadData)
+void* CSocket::DelayRecoveryConnectionThread(void* pThreadData)
 {
     /* function track */
-    CLog::Log(LOG_LEVEL_TRACK, "CSocket::ServerRecyConnectionThreadProc track");
+    CLog::Log(LOG_LEVEL_TRACK, "CSocket::DelayRecoveryConnectionThread track");
 
     time_t CurrentTime = 0;
     LPCONNECTION_T pConn = NULL;
@@ -251,9 +216,9 @@ void* CSocket::ServerRecyConnectionThreadProc(void* pThreadData)
         /* Check once every 1000ms */
         usleep(CHECK_RECYCONN_TIMER * 1000);
         /* Regardless of the situation, first of all the actions that should be done when this condition is established, 
-         * the first thing to do is to determine whether there is a pConnection in the delayed collection queue 
+         * the first thing to do is to determine whether there is a pstConn in the delayed collection queue 
          * that requires delayed collection. 200 milliseconds coming */
-        if(pSocketObj->m_TotalRecyConnectionCount > 0)
+        if(pSocketObj->m_DelayRecoveryConnectionCount > 0)
         {
             CurrentTime = time(NULL);
             if(pthread_mutex_lock(&pSocketObj->m_RecyConnQueueMutex) != 0)
@@ -270,23 +235,21 @@ lblRRTD:
             for(; pos != posEnd; ++pos)
             {
                 pConn = *pos;
-                /* If you do n’t want the whole system to exit, you can continue, otherwise you have to force release */
-                if(((pConn->PutRecyConnQueueTime + pSocketObj->m_RecyConnectionWaitTime) > CurrentTime) && (!g_bIsStopEvent))
+                /* If you don’t want the whole system to exit, you can continue, otherwise you have to force release */
+                if((pConn->putRecyConnQueueTime + pSocketObj->m_DelayRecoveryConnectionWaitTime) > CurrentTime)
                 {
-                    /* Before the release time, the pConnection continues to check */
+                    /* Before the release time, the pstConn continues to check */
                     continue;
                 }
-
-                CLog::Log(LOG_LEVEL_DEBUG, "ServerRecyConnectionThreadProc, Delay the recovery time to recover the connection: socket id = %d", pConn->iSockFd);
                 
-                /* Anything up to the release time, iThrowSendCount should be 0, here we add some logs */
-                if(pConn->iThrowSendCount > 0)
+                /* Anything up to the release time, throwSendMsgCount should be 0, here we add some logs */
+                if(pConn->throwSendMsgCount > 0)
                 {
-                    pConn->iThrowSendCount = 0;
-                    CLog::Log(LOG_LEVEL_EMERG, "pConn->iThrowSendCount = 0, Should not enter this branch");
+                    pConn->throwSendMsgCount = 0;
+                    CLog::Log(LOG_LEVEL_EMERG, "pConn->throwSendMsgCount = 0, Should not enter this branch");
                 }
-                /* Return the pConnection represented by the parameter pConn to the pConnection pool */
-                --pSocketObj->m_TotalRecyConnectionCount;
+                /* Return the pstConn represented by the parameter pConn to the pstConn pool */
+                --pSocketObj->m_DelayRecoveryConnectionCount;
                 pSocketObj->m_RecyConnectionList.erase(pos);
                 pSocketObj->FreeConnection(pConn);
                 goto lblRRTD;
@@ -298,45 +261,46 @@ lblRRTD:
                 return (void *)XiaoHG_ERROR;
             }
         } /* end if */
-
-        /* Exit the entire program */
-        if(g_bIsStopEvent)
-        {
-            if(pSocketObj->m_TotalRecyConnectionCount > 0)
-            {
-                /* Because you want to quit, you have to hard release [no matter when the time is up, 
-                 * no matter whether there are other requirements that do not allow release, you have to hard release] */
-                if(pthread_mutex_lock(&pSocketObj->m_RecyConnQueueMutex) != 0)
-                {
-                    CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_lock(&pSocketObj->m_RecyConnQueueMutex) failed");
-                    return (void *)XiaoHG_ERROR;
-                }
-
-        lblRRTD2:
-                pos = pSocketObj->m_RecyConnectionList.begin();
-			    posEnd = pSocketObj->m_RecyConnectionList.end();
-                for(; pos != posEnd; ++pos)
-                {
-                    /* Return the pConnection represented by the parameter pConn to the pConnection pool */
-                    pConn = *pos;
-                    --pSocketObj->m_TotalRecyConnectionCount;
-                    pSocketObj->m_RecyConnectionList.erase(pos);
-                    pSocketObj->FreeConnection(pConn);
-                    goto lblRRTD2;
-                } /* end for */
-                
-                if(pthread_mutex_unlock(&pSocketObj->m_RecyConnQueueMutex) != 0)
-                {
-                    CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "m_RecyConnQueueMutex unlock failed");
-                    return (void *)XiaoHG_ERROR;
-                }
-            } /* end if */
-            CLog::Log(LOG_LEVEL_NOTICE, "g_bIsStopEvent is true, process exit");
-            break; /* The whole program is about to exit, so break */
-        }  /* end if */
     } /* end while */
     
     return (void*)XiaoHG_SUCCESS;
+}
+
+void CSocket::ClearDelayRecoveryConnections()
+{
+    LPCONNECTION_T pConn = NULL;
+    std::list<LPCONNECTION_T>::iterator pos;
+    std::list<LPCONNECTION_T>::iterator posEnd;
+
+    if(m_DelayRecoveryConnectionCount > 0)
+    {
+        /* Because you want to quit, you have to hard release [no matter when the time is up, 
+         * no matter whether there are other requirements that do not allow release, you have to hard release] */
+        if(pthread_mutex_lock(&m_RecyConnQueueMutex) != 0)
+        {
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "pthread_mutex_lock(&pSocketObj->m_RecyConnQueueMutex) failed");
+            exit(0);
+        }
+
+lblRRTD2:
+        pos = m_RecyConnectionList.begin();
+        posEnd = m_RecyConnectionList.end();
+        for(; pos != posEnd; ++pos)
+        {
+            /* Return the pstConn represented by the parameter pConn to the pstConn pool */
+            pConn = *pos;
+            --m_DelayRecoveryConnectionCount;
+            m_RecyConnectionList.erase(pos);
+            FreeConnection(pConn);
+            goto lblRRTD2;
+        } /* end for */
+        
+        if(pthread_mutex_unlock(&m_RecyConnQueueMutex) != 0)
+        {
+            CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "m_RecyConnQueueMutex unlock failed");
+            exit(0);
+        }
+    } /* end if */
 }
 
 /* =================================================================
@@ -344,7 +308,7 @@ lblRRTD:
  * date: 2020.04.23
  * test time: 2020.04.23
  * function name: CloseConnectionImmediately
- * discription: Close a pConnection 
+ * discription: Close a pstConn 
  * parameter:
  * =================================================================*/
 void CSocket::CloseConnectionImmediately(LPCONNECTION_T pConn)
@@ -353,12 +317,11 @@ void CSocket::CloseConnectionImmediately(LPCONNECTION_T pConn)
     CLog::Log(LOG_LEVEL_TRACK, "CSocket::CloseConnectionImmediately track");
 
     FreeConnection(pConn); 
-    if(pConn->iSockFd != -1)
+    if(pConn->sockFd != -1)
     {
-        close(pConn->iSockFd);
-        pConn->iSockFd = -1;
+        close(pConn->sockFd);
+        pConn->sockFd = -1;
     }
-    return;
 }
 
 /* =================================================================
@@ -366,7 +329,7 @@ void CSocket::CloseConnectionImmediately(LPCONNECTION_T pConn)
  * date: 2020.04.23
  * test time: 2020.04.23
  * function name: ClearConnection
- * discription: clear pConnection list 
+ * discription: clear pstConn list 
  * parameter:
  * =================================================================*/
 void CSocket::ClearConnections()
@@ -384,6 +347,6 @@ void CSocket::ClearConnections()
 		pConn = m_ConnectionList.front();
 		m_ConnectionList.pop_front(); 
         pConn->~CONNECTION_T();
-		m_pMemory->FreeMemory(pConn);
+		CMemory::GetInstance()->FreeMemory(pConn);
 	}
 }

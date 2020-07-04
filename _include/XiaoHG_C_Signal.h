@@ -12,21 +12,21 @@
 /* signals struct */
 typedef struct 
 {
-    int iSigNo;              /* signal code */
+    int signalNo;              /* signal code */
     const char *pSigName;    /* signal string, such: SIGHUP */
     /* signal LogicHandlerCallBack */
-    void (*LogicHandlerCallBack)(int iSigNo, siginfo_t *pSigInfo, void *pContext);
+    void (*LogicHandlerCallBack)(int signalNo, siginfo_t *pSigInfo, void *pContext);
 }SIGNAL_T;
 
 class CSignalCtl
 {
 public:
-    CSignalCtl(){}
+    CSignalCtl();
     ~CSignalCtl(){}
     CSignalCtl(uint32_t* pulSigs);
 
 public:
-    friend void SignalHandler(int iSigNo, siginfo_t *pSigInfo, void *pContext);
+    friend void SignalHandler(int signalNo, siginfo_t *pSigInfo, void *pContext);
 private:
     static void ProcessGetStatus();
 
@@ -42,7 +42,7 @@ public:
 
 private:
     sigset_t m_stSet;
-    uint32_t* m_ulSigs;
+    uint32_t* m_Signals;
 };
 
 

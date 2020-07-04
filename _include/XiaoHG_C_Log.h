@@ -14,28 +14,31 @@
 
 class CConfig;
 
-/* We divided the log into eight levels [level from high to low, the level 
- * with the smallest number is the highest, 
- * the level with the largest number is the lowest] */
-#define LOG_LEVEL_STDERR      0    /* Console error [stderr]: highest level log */
-#define LOG_LEVEL_EMERG       1    /* Urgent [emerg] */
-#define LOG_LEVEL_ALERT       2    /* Alert [alert] */
-#define LOG_LEVEL_CRIT        3    /* Serious [crit] */
-#define LOG_LEVEL_ERR         4    /* Error [error]: belongs to the common level */
-#define LOG_LEVEL_WARN        5    /* Warning [warn]: belongs to the common level */
-#define LOG_LEVEL_NOTICE      6    /* Note [notice] */
-#define LOG_LEVEL_INFO        7    /* Information [info] */
-#define LOG_LEVEL_DEBUG       8    /* Debug [debug] */
-#define LOG_LEVEL_TRACK       9    /* Track [track]: function track */
-
 /* Define the default log storage path and file name */
 #define DEFAULT_LOG_PATH  "logs/XiaoHG_error.log"
 
-/* Log struct */
-typedef struct log_s
+/* We divided the log into eight levels [level from high to low, the level 
+ * with the smallest number is the highest, 
+ * the level with the largest number is the lowest] */
+enum eLogLevel
 {
-	int iLogLevel;
-	int iLogFd;
+    LOG_LEVEL_STDERR = 0,    /* Console error [stderr]: highest level log */
+    LOG_LEVEL_EMERG = 1,    /* Urgent [emerg] */
+    LOG_LEVEL_ALERT = 2,    /* Alert [alert] */
+    LOG_LEVEL_CRIT = 3,    /* Serious [crit] */
+    LOG_LEVEL_ERR = 4,    /* Error [error]: belongs to the common level */
+    LOG_LEVEL_WARN = 5,    /* Warning [warn]: belongs to the common level */
+    LOG_LEVEL_NOTICE = 6,    /* Note [notice] */
+    LOG_LEVEL_INFO = 7,    /* Information [info] */
+    LOG_LEVEL_DEBUG = 8,    /* Debug [debug] */
+    LOG_LEVEL_TRACK = 9    /* Track [track]: function track */
+};
+
+/* Log struct */
+typedef struct stLog
+{
+	int logLevel;
+	int logFd;
 }LOG_T;
 
 class CLog
@@ -46,20 +49,16 @@ public:
     ~CLog();
 
 private:
-    static CLog *m_Instance;
-
-private:
     static LOG_T m_stLog;
     static char *m_pLogBuff;
-    static int m_iLogStrPoint;
-    static int m_iLogStrLen;
+    static uint16_t m_LogStrPoint;
+    static uint16_t m_LogStrLen;
 
 private:
     static pthread_mutex_t m_LogMutex;
 
 private:
-    static CConfig *m_pConfig;
-
+    static CLog *m_Instance;
 /* Singleton implementation */
 public:
     static CLog* GetInstance()
@@ -74,7 +73,6 @@ public:
         }
         return m_Instance;
     }
-
     class CDeleteInstance
     {
     public:
@@ -89,20 +87,20 @@ public:
     };
 
 private:
-    int Init();
-    static bool LogBasicStr(int iLevel);
-    static void WriteLog(const char* &fmt, va_list &stArgs, int iStdFlag = 0);
+    void Init();
+    static bool LogBasicStr(int logLevel);
+    static void WriteLog(const char* &fmt, va_list &stArgs, int stdFlag = 0);
 
 public:
     int SetLogFile(const char *pLogFile);
-    void SetLogLevel(int iLevel);
+    void SetLogLevel(int logLevel);
 
 public:
     static void Log(const char *fmt, ...);
-    static void Log(int iLevel, const char *fmt, ...);
-    static void Log(int iLevel, int iErrno, const char *fmt, ...);
-    static void Log(int iLevel, const char *pFileName, int iLine, const char *fmt, ...);
-    static void Log(int iLevel, int iErrno, const char *pFileName, int iLine, const char *fmt, ...);
+    static void Log(int logLevel, const char *fmt, ...);
+    static void Log(int logLevel, int errNo, const char *fmt, ...);
+    static void Log(int logLevel, const char *pFileName, int lineNo, const char *fmt, ...);
+    static void Log(int logLevel, int errNo, const char *pFileName, int lineNo, const char *fmt, ...);
 };
 
 #endif //!__XiaoHG_LOG_H__

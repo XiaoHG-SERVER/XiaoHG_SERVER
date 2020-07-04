@@ -14,9 +14,10 @@ int g_iSocketFd;
 
 int main(int argc, char *argv[])
 {
-	for (int i = 0; i < 10; i++)
+	printf("XiaoHG, server test\n");
+	for (int i = 0; i < 9; i++)
 	{
-		//fork();
+		fork();
 	}
 
     if(SocketInit() == -1)

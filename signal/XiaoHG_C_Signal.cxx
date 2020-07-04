@@ -14,12 +14,12 @@
 #include "XiaoHG_C_Signal.h"
 #include "XiaoHG_Global.h"
 #include "XiaoHG_Macro.h"
-#include "XiaoHG_Func.h" 
 #include "XiaoHG_C_Log.h"
 #include "XiaoHG_error.h"
 
 #define __THIS_FILE__ "XiaoHG_Signal.cxx"
 
+void SignalHandler(int signalNo, siginfo_t *pSigInfo, void *pContext);
 /* signals */
 SIGNAL_T signals[] = {
     { SIGHUP, "SIGHUP", SignalHandler },
@@ -34,19 +34,20 @@ SIGNAL_T signals[] = {
     { 0, NULL, NULL }
 };
 
-CSignalCtl::CSignalCtl(uint32_t* pulSigs)
-    :m_ulSigs(pulSigs)
+CSignalCtl::CSignalCtl()
 {
-    //m_ulSigs = {SIGCHLD, SIGALRM, SIGIO, SIGINT, SIGHUP, 
-                //SIGUSR1, SIGUSR2, SIGWINCH, SIGTERM, SIGQUIT};
+    Init();
 }
+
+CSignalCtl::CSignalCtl(uint32_t* pulSigs)
+    :m_Signals(pulSigs){}
 
 void CSignalCtl::Init()
 {
     SIGNAL_T *pstSig = NULL;
     struct sigaction stSa;  /* sigaction：A system-defined structure related to signals */
     /* The number of the signal is not 0 */
-    for (pstSig = signals; pstSig->iSigNo != 0; pstSig++)
+    for (pstSig = signals; pstSig->signalNo != 0; pstSig++)
     {
         memset(&stSa, 0, sizeof(struct sigaction));
         /* if the signal is not null, set the LogicHandlerCallBack */
@@ -65,7 +66,7 @@ void CSignalCtl::Init()
         sigemptyset(&stSa.sa_mask);
 
         /* set signal heandler*/
-        if (sigaction(pstSig->iSigNo, &stSa, NULL) == -1)    
+        if (sigaction(pstSig->signalNo, &stSa, NULL) == -1)    
         {
             CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "sigaction(%s) failed", pstSig->pSigName);
         }
@@ -82,7 +83,6 @@ void CSignalCtl::ProcessGetStatus()
     int iOne = 0;        /* only iOne time to signal handle */
     int iStatus = 0;
     pid_t pid = 0;
-    int iErr = 0;
 
     /* Parent process receive SIGCHLD signal when kill Child process */
     for ( ;; ) 
@@ -97,19 +97,19 @@ void CSignalCtl::ProcessGetStatus()
         /* this is waitpid return error */
         if(pid == -1)
         {
-            iErr = errno;
+            uint32_t errNo = errno;
             /* The call was interrupted by a signal */
-            if(iErr == EINTR)           
+            if(errNo == EINTR)           
             {
                 continue;
             }
             /* no Child process */
-            if(iErr == ECHILD  && iOne)  
+            if(errNo == ECHILD  && iOne)  
             {
                 return;
             }
             /* no Child process */
-            if (iErr == ECHILD)
+            if (errNo == ECHILD)
             {
                 CLog::Log(LOG_LEVEL_ERR, errno, __THIS_FILE__, __LINE__, "waitpid failed");
                 return;
@@ -138,6 +138,7 @@ void CSignalCtl::ProcessGetStatus()
 
 uint32_t CSignalCtl::RegisterSignals()
 {
+    CLog::Log(LOG_LEVEL_TRACK, "CSignalCtl::RegisterSignals track");
     sigemptyset(&m_stSet);   /* clrean signals */
 
     /* The following signals are not expected to be received during the execution of this function 
@@ -145,9 +146,9 @@ uint32_t CSignalCtl::RegisterSignals()
     /* fork()This method is used when the child process prevents signal interference */
     /* Here is to prevent the phenomenon that the creation process fails due to receiving some 
         signals when creating the child process, to prevent signal interference */
-    for (int i = 0; i < sizeof(m_ulSigs)/sizeof(m_ulSigs[0]); i++)
+    for (int i = 0; i < sizeof(m_Signals)/sizeof(m_Signals[0]); i++)
     {
-        sigaddset(&m_stSet, m_ulSigs[i]);
+        sigaddset(&m_stSet, m_Signals[i]);
     }
     
     /* Shield signal */
@@ -194,28 +195,28 @@ uint32_t CSignalCtl::AddSigPending()
  * function name: SignalHandler
  * discription: signal LogicHandlerCallBack
  * =================================================================*/
-void SignalHandler(int iSigNo, siginfo_t *pSigInfo, void *pContext)
+void SignalHandler(int signalNo, siginfo_t *pSigInfo, void *pContext)
 {
     /* function track */
     CLog::Log(LOG_LEVEL_TRACK, "SignalHandler track");
 
     SIGNAL_T *pstSig = NULL;
     /* find the register signal */
-    for (pstSig = signals; pstSig->iSigNo != 0; pstSig++)     
+    for (pstSig = signals; pstSig->signalNo != 0; pstSig++)     
     {         
         /* Found the corresponding registration signal */
-        if (pstSig->iSigNo = iSigNo)
+        if (pstSig->signalNo = signalNo)
         {
             break;
         }
     } /* end for */
 
     /* master process or worker process */
-    if(g_iProcessID == MASTER_PROCESS)
+    if(CProcessCtl::m_ProcessID == MASTER_PROCESS)
     {
-        CLog::Log(LOG_LEVEL_INFO, "master process receive signal: %d", iSigNo);
+        CLog::Log(LOG_LEVEL_INFO, "master process receive signal: %d", signalNo);
         /* master */
-        switch (iSigNo)
+        switch (signalNo)
         {
         case SIGCHLD: /* receive the signal when subprocess exit */
             break;
@@ -225,12 +226,12 @@ void SignalHandler(int iSigNo, siginfo_t *pSigInfo, void *pContext)
         } /* end switch */
     }
     /* worker */
-    else if(g_iProcessID == WORKER_PROCESS)
+    else if(CProcessCtl::m_ProcessID == WORKER_PROCESS)
     {
-        CLog::Log(LOG_LEVEL_INFO, "worker process receive signal: %d", iSigNo);
+        CLog::Log(LOG_LEVEL_INFO, "worker process receive signal: %d", signalNo);
         /* worker */
         /* for the future */
-        switch (iSigNo)
+        switch (signalNo)
         {
         case 0:
             break;
@@ -241,24 +242,22 @@ void SignalHandler(int iSigNo, siginfo_t *pSigInfo, void *pContext)
     }
     else
     {
-        CLog::Log(LOG_LEVEL_INFO, "Not a mater process or a worker process receive signal: %d", iSigNo);
-    } /* end if(g_iProcessID == MASTER_PROCESS) */
+        CLog::Log(LOG_LEVEL_INFO, "Not a mater process or a worker process receive signal: %d", signalNo);
+    } /* end if(m_ProcessID == MASTER_PROCESS) */
 
     /* this is record some informetion */
     if(pSigInfo && pSigInfo->si_pid)
     {
-        CLog::Log(LOG_LEVEL_INFO, "receive signal: %d", iSigNo);
+        CLog::Log(LOG_LEVEL_INFO, "receive signal: %d", signalNo);
     }
     else
     {
-        CLog::Log(LOG_LEVEL_INFO, "receive signal: %d", iSigNo);
+        CLog::Log(LOG_LEVEL_INFO, "receive signal: %d", signalNo);
     }
 
-    if (iSigNo == SIGCHLD) 
+    if (signalNo == SIGCHLD) 
     {
         /* Get the end iStatus of a child process */
         CSignalCtl::ProcessGetStatus();
     } /* end if */
-
-    return;
 }

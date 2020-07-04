@@ -16,7 +16,9 @@ void PrintMsgInfo(char *pSendBuf, int iBufLen)
 {
 	LPCOMM_PKG_HEADER pPkgHeader = (LPCOMM_PKG_HEADER)pSendBuf;
 	printf("[%s: %d]SendData()即将要发送测试数据给服务端：pPkgHeader->msgCode = %d, pPkgHeader->pkgLen = %d\n",
-												__FILE__, __LINE__, ntohs(pPkgHeader->usMsgCode), ntohs(pPkgHeader->usPkgLen));
+												__FILE__, __LINE__, ntohs(pPkgHeader->usMsgCode), ntohs(pPkgHeader->uPkgLen));
+	printf("[%s: %d]SendData()即将要发送测试数据给服务端：pPkgHeader->msgCode = %d, pPkgHeader->pkgLen = %d\n",
+												__FILE__, __LINE__, pPkgHeader->usMsgCode, pPkgHeader->uPkgLen);
 }
 	
 int SendData(char *pSendBuf, int iBufLen)
